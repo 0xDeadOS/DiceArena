@@ -220,8 +220,11 @@ export function createApp({
       });
     }
 
-    // 4) Гость / локальная разработка
-    if (guest !== false && allowDevAuth) {
+    // 4) Гость / локальная разработка.
+    // Гостевой вход отдаёт админский профиль, поэтому в проде он запрещён,
+    // если админ явно не включил ALLOW_DEV_AUTH=true.
+    const devAuthAllowed = allowDevAuth && (process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_AUTH === 'true');
+    if (guest !== false && devAuthAllowed) {
       const fallback = store.db.players[0];
       if (!fallback) return fail(res, 500, 'В базе нет игроков.');
       const token = signToken({ playerId: fallback.id, telegramId: fallback.telegramId, admin: store.isAdmin(fallback) });

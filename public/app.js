@@ -319,7 +319,11 @@ async function authenticate() {
     localStorage.setItem('pod_token', session.token);
     if (session.notice) toast(session.notice, 'gold', 5200);
     if (query.has('token') || query.has('sig')) {
-      window.history.replaceState({}, '', window.location.pathname);
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        /* History API недоступен — ссылка просто останется в адресной строке */
+      }
     }
     return session;
   } catch (error) {
@@ -390,8 +394,17 @@ function goTo(screen, { silent: silentNav = false } = {}) {
   state.screen = screen;
   $$('.screen').forEach((node) => node.classList.toggle('active', node.dataset.screen === screen));
   if (!silentNav) sound.click();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  window.history.replaceState({}, '', `#${screen}`);
+  // Старые WebView и тестовые DOM не всегда умеют scrollTo с опциями.
+  try {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch {
+    try { window.scrollTo(0, 0); } catch { /* прокрутка недоступна */ }
+  }
+  try {
+    window.history.replaceState({}, '', `#${screen}`);
+  } catch {
+    /* file:// и sandbox-iframe без History API */
+  }
   if (screen === 'codex') openCodex();
 }
 
