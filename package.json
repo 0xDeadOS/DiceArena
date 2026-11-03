@@ -1,0 +1,30 @@
+{
+  "name": "path-of-dice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Path of Dice (Кубик Изгнанника) — co-op/competitive Telegram Web Mini App in the Path of Exile universe",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development TUNNEL=1 node src/index.js",
+    "bot": "node src/bot.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "grammy": "^1.30.0"
+  },
+  "keywords": [
+    "telegram",
+    "mini-app",
+    "path-of-exile",
+    "dice",
+    "game"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,1419 @@
+{
+  "schema": 3,
+  "meta": {
+    "createdAt": 1767225600000,
+    "updatedAt": 1767225600000,
+    "generation": 1
+  },
+  "settings": {
+    "dailyRollsDefault": 1,
+    "chatName": "Убежище Изгнанников",
+    "ladderResetAt": null,
+    "announceTopTier": true
+  },
+  "players": [
+    {
+      "id": "p1",
+      "name": "Ксандр",
+      "nickname": "xandr_void",
+      "avatar": "🜲",
+      "role": "Инквизитор",
+      "telegramId": null,
+      "isAdmin": true,
+      "createdAt": 1766707200000,
+      "equippedDieId": "die_mw0zkt6817mzd",
+      "dice": [
+        {
+          "id": "die_mw0zkt6817mzd",
+          "baseId": "diamond_d4",
+          "baseName": "Алмазный Тетраэдр",
+          "short": "D4",
+          "faces": 4,
+          "rarity": "rare",
+          "uniqueId": null,
+          "name": "Кровавый Клинок",
+          "icon": "💎",
+          "accent": "#8fd7ff",
+          "ilvl": 70,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt692h9a5",
+              "affixId": "rarity",
+              "name": "Количество и редкость сфер",
+              "type": "suffix",
+              "key": "rarityPct",
+              "unit": "pct",
+              "stat": "% Increased редкости валюты",
+              "tier": "T4",
+              "value": 18,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt693hl6d",
+              "affixId": "flat_add",
+              "name": "Плоский бонус к грани",
+              "type": "prefix",
+              "key": "flatAdd",
+              "unit": "flat",
+              "stat": "к броску кубика",
+              "tier": "T1",
+              "value": 4,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt69436p0",
+              "affixId": "armour",
+              "name": "Броня изгнанника",
+              "type": "suffix",
+              "key": "damageReduction",
+              "unit": "pct",
+              "stat": "% снижение входящего урона в походе",
+              "tier": "T2",
+              "value": 19,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt695f3fm",
+              "affixId": "orb_find",
+              "name": "Поиск сфер",
+              "type": "suffix",
+              "key": "orbDupeChance",
+              "unit": "pct",
+              "stat": "% шанс двойной сферы за бросок",
+              "tier": "T2",
+              "value": 17,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt696by5d",
+              "affixId": "cold_dmg",
+              "name": "Стихийный урон холодом",
+              "type": "prefix",
+              "key": "coldDamagePct",
+              "unit": "pct",
+              "stat": "% очков холодом",
+              "tier": "T2",
+              "value": 31,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt69735k6",
+              "affixId": "max_face",
+              "name": "Перегрузка верхней грани",
+              "type": "prefix",
+              "key": "maxFaceOverload",
+              "unit": "pct",
+              "stat": "шанс выпадения максимальной грани",
+              "tier": "T4",
+              "value": 12,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "bonusCritMulti",
+            "value": 35,
+            "text": "+35% к множителю крита"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p1",
+          "createdAt": 1793728402352
+        },
+        {
+          "id": "die_mw0zkt698dde7",
+          "baseId": "bone_d6",
+          "baseName": "Костяной Кубик",
+          "short": "D6",
+          "faces": 6,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Костяной Кубик",
+          "icon": "🦴",
+          "accent": "#d8cbb4",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt699g2ej",
+              "affixId": "face_floor",
+              "name": "Подъём нижней грани",
+              "type": "prefix",
+              "key": "minFaceBonus",
+              "unit": "flat",
+              "stat": "+N к минимальной грани",
+              "tier": "T3",
+              "value": 2,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "minFaceBonus",
+            "value": 1,
+            "text": "+1 к минимальному значению выпавшей грани"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p1",
+          "createdAt": 1793728402353
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt69a6nyb",
+          "tier": 1,
+          "zoneId": "coast",
+          "name": "Прибрежные пустоши",
+          "icon": "🌊",
+          "color": "white",
+          "bossName": "Отрекшийся Надвигатель",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p1",
+          "createdAt": 1793728402353
+        },
+        {
+          "id": "map_mw0zkt69bl5ud",
+          "tier": 2,
+          "zoneId": "graveyard",
+          "name": "Забытое кладбище",
+          "icon": "🪦",
+          "color": "white",
+          "bossName": "Костяной Мясник",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p1",
+          "createdAt": 1793728402353
+        },
+        {
+          "id": "map_mw0zkt69cg6lt",
+          "tier": 6,
+          "zoneId": "mines",
+          "name": "Затопленные шахты",
+          "icon": "⛏️",
+          "color": "yellow",
+          "bossName": "Утопленный Смотритель",
+          "rarity": "rare",
+          "quality": 0,
+          "mods": [
+            "blood_price",
+            "mirror_map",
+            "frenzied"
+          ],
+          "corrupted": false,
+          "ownerId": "p1",
+          "createdAt": 1793728402353
+        }
+      ],
+      "inventory": {
+        "whetstone": 22,
+        "transmutation": 18,
+        "alteration": 14,
+        "augmentation": 13,
+        "scouring": 10,
+        "regal": 22,
+        "chaos": 17,
+        "annulment": 4,
+        "exalted": 14,
+        "divine": 16,
+        "vaal": 11
+      },
+      "fragments": {
+        "hydra": 1,
+        "chimera": 0,
+        "phoenix": 0,
+        "minotaur": 1
+      },
+      "atlasPoints": 4,
+      "atlasPassives": [
+        "endless_trails",
+        "trophy_hunter"
+      ],
+      "atlasCompleted": [
+        1,
+        2
+      ],
+      "bossKills": 0,
+      "mapsCompleted": 0,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 520,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    },
+    {
+      "id": "p2",
+      "name": "Мирабель",
+      "nickname": "mira_belle",
+      "avatar": "🌙",
+      "role": "Оккультистка",
+      "telegramId": null,
+      "isAdmin": false,
+      "createdAt": 1766793600000,
+      "equippedDieId": "die_mw0zkt69dgodx",
+      "dice": [
+        {
+          "id": "die_mw0zkt69dgodx",
+          "baseId": "weighted_d8",
+          "baseName": "Утяжелённый Октаэдр",
+          "short": "D8",
+          "faces": 8,
+          "rarity": "rare",
+          "uniqueId": null,
+          "name": "Астральный Венец",
+          "icon": "⚖️",
+          "accent": "#b7a58a",
+          "ilvl": 73,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt69e403i",
+              "affixId": "chaos_dmg",
+              "name": "Урон хаосом",
+              "type": "prefix",
+              "key": "chaosDamagePct",
+              "unit": "pct",
+              "stat": "% урона хаосом",
+              "tier": "T5",
+              "value": 8,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt69f6r4g",
+              "affixId": "extra_orbs",
+              "name": "Гарантированные доп. сферы",
+              "type": "suffix",
+              "key": "extraOrbs",
+              "unit": "flat",
+              "stat": "+N сфер за бросок",
+              "tier": "T2",
+              "value": 2,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt69g4joa",
+              "affixId": "multistrike",
+              "name": "Эхо Броска",
+              "type": "prefix",
+              "key": "multistrikeChance",
+              "unit": "pct",
+              "stat": "% шанс Эха Броска",
+              "tier": "T4",
+              "value": 10,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6ahi1xp",
+              "affixId": "phys_dmg",
+              "name": "Физический урон",
+              "type": "prefix",
+              "key": "physDamagePct",
+              "unit": "pct",
+              "stat": "% физического урона",
+              "tier": "T5",
+              "value": 9,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6ai52m",
+              "affixId": "free_orb",
+              "name": "Экономия сфер",
+              "type": "suffix",
+              "key": "freeOrbChance",
+              "unit": "pct",
+              "stat": "% шанс не потратить сферу при крафте",
+              "tier": "T3",
+              "value": 14,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6ajku91",
+              "affixId": "crit_chance",
+              "name": "Шанс критического удара",
+              "type": "suffix",
+              "key": "critChance",
+              "unit": "pct",
+              "stat": "% Increased шанса крита",
+              "tier": "T5",
+              "value": 10,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "rerollOnes",
+            "value": true,
+            "text": "Выпавшая грань «1» всегда перебрасывается автоматически"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p2",
+          "createdAt": 1793728402353
+        },
+        {
+          "id": "die_mw0zkt6ak7fpx",
+          "baseId": "diamond_d4",
+          "baseName": "Алмазный Тетраэдр",
+          "short": "D4",
+          "faces": 4,
+          "rarity": "normal",
+          "uniqueId": null,
+          "name": "Алмазный Тетраэдр",
+          "icon": "💎",
+          "accent": "#8fd7ff",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [],
+          "implicit": {
+            "key": "bonusCritMulti",
+            "value": 35,
+            "text": "+35% к множителю крита"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p2",
+          "createdAt": 1793728402354
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt6al767q",
+          "tier": 2,
+          "zoneId": "graveyard",
+          "name": "Забытое кладбище",
+          "icon": "🪦",
+          "color": "white",
+          "bossName": "Костяной Мясник",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p2",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "map_mw0zkt6amcr5g",
+          "tier": 3,
+          "zoneId": "caverns",
+          "name": "Паучьи пещеры",
+          "icon": "🕷️",
+          "color": "white",
+          "bossName": "Мать Выводка",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p2",
+          "createdAt": 1793728402354
+        }
+      ],
+      "inventory": {
+        "whetstone": 19,
+        "transmutation": 21,
+        "alteration": 6,
+        "augmentation": 18,
+        "scouring": 16,
+        "regal": 15,
+        "chaos": 16,
+        "annulment": 20,
+        "exalted": 19,
+        "divine": 8,
+        "vaal": 18
+      },
+      "fragments": {
+        "hydra": 0,
+        "chimera": 1,
+        "phoenix": 0,
+        "minotaur": 0
+      },
+      "atlasPoints": 2,
+      "atlasPassives": [
+        "golden_rush"
+      ],
+      "atlasCompleted": [
+        1
+      ],
+      "bossKills": 1,
+      "mapsCompleted": 2,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 150,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    },
+    {
+      "id": "p3",
+      "name": "Тарн",
+      "nickname": "tarn_ironfist",
+      "avatar": "🛡️",
+      "role": "Джаггернаут",
+      "telegramId": null,
+      "isAdmin": false,
+      "createdAt": 1766880000000,
+      "equippedDieId": "die_mw0zkt6ankyzu",
+      "dice": [
+        {
+          "id": "die_mw0zkt6ankyzu",
+          "baseId": "astral_d6",
+          "baseName": "Астральный Кубик",
+          "short": "D6",
+          "faces": 6,
+          "rarity": "rare",
+          "uniqueId": null,
+          "name": "Огненный Разлом",
+          "icon": "🌌",
+          "accent": "#a88bff",
+          "ilvl": 76,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6aoenog",
+              "affixId": "fire_dmg",
+              "name": "Стихийный урон огнём",
+              "type": "prefix",
+              "key": "fireDamagePct",
+              "unit": "pct",
+              "stat": "% очков огнём",
+              "tier": "T5",
+              "value": 10,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6api9o0",
+              "affixId": "flat_add",
+              "name": "Плоский бонус к грани",
+              "type": "prefix",
+              "key": "flatAdd",
+              "unit": "flat",
+              "stat": "к броску кубика",
+              "tier": "T5",
+              "value": 1,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6aqfd9j",
+              "affixId": "shield_break",
+              "name": "Пробитие щита босса",
+              "type": "prefix",
+              "key": "shieldBreakPct",
+              "unit": "pct",
+              "stat": "% пробития щита",
+              "tier": "T5",
+              "value": 10,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6ar73nr",
+              "affixId": "crit_multi",
+              "name": "Множитель крита",
+              "type": "suffix",
+              "key": "critMulti",
+              "unit": "pct",
+              "stat": "% к множителю крита",
+              "tier": "T4",
+              "value": 22,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "bonusRarity",
+            "value": 35,
+            "text": "+35% к количеству и редкости падающей валюты (IIR)"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p3",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "die_mw0zkt6as2iud",
+          "baseId": "weighted_d8",
+          "baseName": "Утяжелённый Октаэдр",
+          "short": "D8",
+          "faces": 8,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Утяжелённый Октаэдр",
+          "icon": "⚖️",
+          "accent": "#b7a58a",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6at1rmi",
+              "affixId": "multistrike",
+              "name": "Эхо Броска",
+              "type": "prefix",
+              "key": "multistrikeChance",
+              "unit": "pct",
+              "stat": "% шанс Эха Броска",
+              "tier": "T1",
+              "value": 25,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6aug298",
+              "affixId": "extra_orbs",
+              "name": "Гарантированные доп. сферы",
+              "type": "suffix",
+              "key": "extraOrbs",
+              "unit": "flat",
+              "stat": "+N сфер за бросок",
+              "tier": "T4",
+              "value": 1,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "rerollOnes",
+            "value": true,
+            "text": "Выпавшая грань «1» всегда перебрасывается автоматически"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p3",
+          "createdAt": 1793728402354
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt6av6143",
+          "tier": 3,
+          "zoneId": "caverns",
+          "name": "Паучьи пещеры",
+          "icon": "🕷️",
+          "color": "white",
+          "bossName": "Мать Выводка",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p3",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "map_mw0zkt6awhk85",
+          "tier": 4,
+          "zoneId": "ruins",
+          "name": "Разрушенные руины",
+          "icon": "🏚️",
+          "color": "white",
+          "bossName": "Хранитель Пепла",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p3",
+          "createdAt": 1793728402354
+        }
+      ],
+      "inventory": {
+        "whetstone": 19,
+        "transmutation": 13,
+        "alteration": 17,
+        "augmentation": 4,
+        "scouring": 8,
+        "regal": 9,
+        "chaos": 10,
+        "annulment": 8,
+        "exalted": 22,
+        "divine": 5,
+        "vaal": 5
+      },
+      "fragments": {
+        "hydra": 0,
+        "chimera": 0,
+        "phoenix": 1,
+        "minotaur": 0
+      },
+      "atlasPoints": 2,
+      "atlasPassives": [],
+      "atlasCompleted": [],
+      "bossKills": 2,
+      "mapsCompleted": 4,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 278,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    },
+    {
+      "id": "p4",
+      "name": "Лисса",
+      "nickname": "lissa_spark",
+      "avatar": "⚡",
+      "role": "Элементалистка",
+      "telegramId": null,
+      "isAdmin": false,
+      "createdAt": 1766966400000,
+      "equippedDieId": "die_mw0zkt6axfgin",
+      "dice": [
+        {
+          "id": "die_mw0zkt6axfgin",
+          "baseId": "prismatic_d10",
+          "baseName": "Призматический Декаэдр",
+          "short": "D10",
+          "faces": 10,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Призматический Декаэдр",
+          "icon": "🔮",
+          "accent": "#7ff0d0",
+          "ilvl": 79,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6ay4q1q",
+              "affixId": "max_face",
+              "name": "Перегрузка верхней грани",
+              "type": "prefix",
+              "key": "maxFaceOverload",
+              "unit": "pct",
+              "stat": "шанс выпадения максимальной грани",
+              "tier": "T2",
+              "value": 24,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6azk634",
+              "affixId": "party_aura_crit",
+              "name": "Командная аура крита",
+              "type": "suffix",
+              "key": "partyAuraCrit",
+              "unit": "pct",
+              "stat": "+N% шанса крита всей пати",
+              "tier": "T2",
+              "value": 5,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "bonusIncScore",
+            "value": 25,
+            "text": "+25% Increased очков от всех бросков"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p4",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "die_mw0zkt6a10ellq",
+          "baseId": "astral_d6",
+          "baseName": "Астральный Кубик",
+          "short": "D6",
+          "faces": 6,
+          "rarity": "normal",
+          "uniqueId": null,
+          "name": "Астральный Кубик",
+          "icon": "🌌",
+          "accent": "#a88bff",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [],
+          "implicit": {
+            "key": "bonusRarity",
+            "value": 35,
+            "text": "+35% к количеству и редкости падающей валюты (IIR)"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p4",
+          "createdAt": 1793728402354
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt6a117vx0",
+          "tier": 4,
+          "zoneId": "ruins",
+          "name": "Разрушенные руины",
+          "icon": "🏚️",
+          "color": "white",
+          "bossName": "Хранитель Пепла",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p4",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "map_mw0zkt6a12qni",
+          "tier": 5,
+          "zoneId": "heart",
+          "name": "Сердце Зверя",
+          "icon": "🫀",
+          "color": "white",
+          "bossName": "Пульсирующая Масса",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p4",
+          "createdAt": 1793728402354
+        }
+      ],
+      "inventory": {
+        "whetstone": 27,
+        "transmutation": 9,
+        "alteration": 12,
+        "augmentation": 11,
+        "scouring": 12,
+        "regal": 21,
+        "chaos": 25,
+        "annulment": 22,
+        "exalted": 16,
+        "divine": 20,
+        "vaal": 15
+      },
+      "fragments": {
+        "hydra": 0,
+        "chimera": 0,
+        "phoenix": 0,
+        "minotaur": 0
+      },
+      "atlasPoints": 1,
+      "atlasPassives": [],
+      "atlasCompleted": [],
+      "bossKills": 3,
+      "mapsCompleted": 6,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 175,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    },
+    {
+      "id": "p5",
+      "name": "Кай",
+      "nickname": "kai_shadow",
+      "avatar": "🗡️",
+      "role": "Убийца",
+      "telegramId": null,
+      "isAdmin": false,
+      "createdAt": 1767052800000,
+      "equippedDieId": "die_mw0zkt6a13csg0",
+      "dice": [
+        {
+          "id": "die_mw0zkt6a13csg0",
+          "baseId": "runic_d12",
+          "baseName": "Рунический Додекаэдр Шейпера",
+          "short": "D12",
+          "faces": 12,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Рунический Додекаэдр Шейпера",
+          "icon": "🜲",
+          "accent": "#ffb347",
+          "ilvl": 82,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6a14ecsa",
+              "affixId": "inc_score",
+              "name": "Increased очков",
+              "type": "prefix",
+              "key": "incScore",
+              "unit": "pct",
+              "stat": "% Increased очков",
+              "tier": "T4",
+              "value": 13,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6a15h3ct",
+              "affixId": "crit_multi",
+              "name": "Множитель крита",
+              "type": "suffix",
+              "key": "critMulti",
+              "unit": "pct",
+              "stat": "% к множителю крита",
+              "tier": "T1",
+              "value": 53,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "multistrike",
+            "value": 15,
+            "text": "+15% шанс Эха Броска (Multistrike) и +1 к результату грани",
+            "secondary": {
+              "key": "flatAdd",
+              "value": 1
+            }
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p5",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "die_mw0zkt6a16j9yd",
+          "baseId": "prismatic_d10",
+          "baseName": "Призматический Декаэдр",
+          "short": "D10",
+          "faces": 10,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Призматический Декаэдр",
+          "icon": "🔮",
+          "accent": "#7ff0d0",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6a17fc6o",
+              "affixId": "crit_multi",
+              "name": "Множитель крита",
+              "type": "suffix",
+              "key": "critMulti",
+              "unit": "pct",
+              "stat": "% к множителю крита",
+              "tier": "T4",
+              "value": 17,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "bonusIncScore",
+            "value": 25,
+            "text": "+25% Increased очков от всех бросков"
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p5",
+          "createdAt": 1793728402354
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt6a1837hi",
+          "tier": 5,
+          "zoneId": "heart",
+          "name": "Сердце Зверя",
+          "icon": "🫀",
+          "color": "white",
+          "bossName": "Пульсирующая Масса",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p5",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "map_mw0zkt6a19hmdk",
+          "tier": 2,
+          "zoneId": "graveyard",
+          "name": "Забытое кладбище",
+          "icon": "🪦",
+          "color": "white",
+          "bossName": "Костяной Мясник",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p5",
+          "createdAt": 1793728402354
+        }
+      ],
+      "inventory": {
+        "whetstone": 20,
+        "transmutation": 5,
+        "alteration": 16,
+        "augmentation": 20,
+        "scouring": 14,
+        "regal": 11,
+        "chaos": 14,
+        "annulment": 6,
+        "exalted": 21,
+        "divine": 16,
+        "vaal": 22
+      },
+      "fragments": {
+        "hydra": 0,
+        "chimera": 0,
+        "phoenix": 0,
+        "minotaur": 0
+      },
+      "atlasPoints": 1,
+      "atlasPassives": [],
+      "atlasCompleted": [],
+      "bossKills": 4,
+      "mapsCompleted": 8,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 184,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    },
+    {
+      "id": "p6",
+      "name": "Нокс",
+      "nickname": "nox_grave",
+      "avatar": "💀",
+      "role": "Некромант",
+      "telegramId": null,
+      "isAdmin": false,
+      "createdAt": 1767139200000,
+      "equippedDieId": "die_mw0zkt6a1a47y6",
+      "dice": [
+        {
+          "id": "die_mw0zkt6a1a47y6",
+          "baseId": "runic_d12",
+          "baseName": "Рунический Додекаэдр Шейпера",
+          "short": "D12",
+          "faces": 12,
+          "rarity": "magic",
+          "uniqueId": null,
+          "name": "Рунический Додекаэдр Шейпера",
+          "icon": "🜲",
+          "accent": "#ffb347",
+          "ilvl": 85,
+          "quality": 0,
+          "mods": [
+            {
+              "id": "mod_mw0zkt6a1blcr7",
+              "affixId": "max_face",
+              "name": "Перегрузка верхней грани",
+              "type": "prefix",
+              "key": "maxFaceOverload",
+              "unit": "pct",
+              "stat": "шанс выпадения максимальной грани",
+              "tier": "T4",
+              "value": 13,
+              "crafted": false
+            },
+            {
+              "id": "mod_mw0zkt6a1cil64",
+              "affixId": "lucky",
+              "name": "Lucky бросок",
+              "type": "suffix",
+              "key": "luckyChance",
+              "unit": "pct",
+              "stat": "% шанс Lucky (бросок дважды, берётся лучший)",
+              "tier": "T3",
+              "value": 13,
+              "crafted": false
+            }
+          ],
+          "implicit": {
+            "key": "multistrike",
+            "value": 15,
+            "text": "+15% шанс Эха Броска (Multistrike) и +1 к результату грани",
+            "secondary": {
+              "key": "flatAdd",
+              "value": 1
+            }
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p6",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "die_mw0zkt6a1d1yrd",
+          "baseId": "runic_d12",
+          "baseName": "Рунический Додекаэдр Шейпера",
+          "short": "D12",
+          "faces": 12,
+          "rarity": "normal",
+          "uniqueId": null,
+          "name": "Рунический Додекаэдр Шейпера",
+          "icon": "🜲",
+          "accent": "#ffb347",
+          "ilvl": 60,
+          "quality": 0,
+          "mods": [],
+          "implicit": {
+            "key": "multistrike",
+            "value": 15,
+            "text": "+15% шанс Эха Броска (Multistrike) и +1 к результату грани",
+            "secondary": {
+              "key": "flatAdd",
+              "value": 1
+            }
+          },
+          "vaalImplicits": [],
+          "corrupted": false,
+          "locked": false,
+          "ownerId": "p6",
+          "createdAt": 1793728402354
+        }
+      ],
+      "maps": [
+        {
+          "id": "map_mw0zkt6a1ecwut",
+          "tier": 6,
+          "zoneId": "mines",
+          "name": "Затопленные шахты",
+          "icon": "⛏️",
+          "color": "yellow",
+          "bossName": "Утопленный Смотритель",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p6",
+          "createdAt": 1793728402354
+        },
+        {
+          "id": "map_mw0zkt6a1fcgit",
+          "tier": 3,
+          "zoneId": "caverns",
+          "name": "Паучьи пещеры",
+          "icon": "🕷️",
+          "color": "white",
+          "bossName": "Мать Выводка",
+          "rarity": "normal",
+          "quality": 0,
+          "mods": [],
+          "corrupted": false,
+          "ownerId": "p6",
+          "createdAt": 1793728402354
+        }
+      ],
+      "inventory": {
+        "whetstone": 32,
+        "transmutation": 18,
+        "alteration": 12,
+        "augmentation": 12,
+        "scouring": 20,
+        "regal": 10,
+        "chaos": 28,
+        "annulment": 15,
+        "exalted": 18,
+        "divine": 17,
+        "vaal": 11
+      },
+      "fragments": {
+        "hydra": 0,
+        "chimera": 0,
+        "phoenix": 0,
+        "minotaur": 0
+      },
+      "atlasPoints": 1,
+      "atlasPassives": [],
+      "atlasCompleted": [],
+      "bossKills": 5,
+      "mapsCompleted": 10,
+      "portals": 5,
+      "dailyRollsUsed": 0,
+      "lastRollDay": null,
+      "cooldownUntil": 0,
+      "charges": 0,
+      "xp": 294,
+      "levelClaimed": 1,
+      "lastChestDay": null,
+      "chestBonusMaps": 0,
+      "daily": {
+        "day": "2026-01-01",
+        "counters": {
+          "rolls": 0,
+          "nodes": 0,
+          "maps": 0,
+          "crafts": 0,
+          "raidDamage": 0,
+          "duelWins": 0,
+          "bossKills": 0,
+          "duels": 0
+        },
+        "claimed": []
+      },
+      "stats": {
+        "totalRolls": 0,
+        "totalDamage": 0,
+        "bestScore": 0,
+        "crits": 0,
+        "vaals": 0,
+        "exaltsFound": 0,
+        "topTierFound": 0,
+        "duelsWon": 0,
+        "duelsLost": 0,
+        "raidDamage": 0
+      },
+      "lastSeenAt": 1767225600000,
+      "lastReport": null
+    }
+  ],
+  "chat": {
+    "id": "chapel",
+    "name": "Убежище Изгнанников",
+    "boss": {
+      "name": "Кровавый Изгнанник",
+      "icon": "🔥",
+      "level": 3,
+      "maxHp": 2400,
+      "hp": 1820,
+      "spawnedAt": 1793728402354,
+      "defeatedAt": null,
+      "nextLevel": 4
+    },
+    "defeatedBosses": 4,
+    "totalRolls": 0,
+    "createdAt": 1767225600000
+  },
+  "raid": {
+    "fragments": {
+      "hydra": 0,
+      "chimera": 0,
+      "phoenix": 0,
+      "minotaur": 0
+    },
+    "active": null,
+    "bossIndex": 0,
+    "history": [
+      {
+        "bossId": "shaper_of_dice",
+        "name": "Создатель",
+        "hp": 0,
+        "maxHp": 6000,
+        "defeated": true,
+        "expired": false,
+        "at": 1767052800000,
+        "contributors": {
+          "p1": 2100,
+          "p3": 1800,
+          "p4": 2100
+        },
+        "mvp": "p1",
+        "uniquePrize": "kaoms_die"
+      }
+    ],
+    "lastDefeated": null
+  },
+  "atlas": {
+    "activeRuns": {},
+    "history": []
+  },
+  "duels": [],
+  "feed": [
+    {
+      "id": "feed_seed1",
+      "at": 1767222000000,
+      "kind": "roll",
+      "playerId": "p1",
+      "playerName": "Ксандр",
+      "text": "💥 Кубик Охотника: КРИТ на 214 очков и 268 урона.",
+      "meta": {
+        "score": 214,
+        "damage": 268,
+        "crit": true
+      }
+    },
+    {
+      "id": "feed_seed2",
+      "at": 1767218400000,
+      "kind": "map_win",
+      "playerId": "p3",
+      "playerName": "Тарн",
+      "text": "🏆 Тарн зачистил T4 «Разрушенные руины»! Добыча: 🎭2 🌟1",
+      "meta": {}
+    },
+    {
+      "id": "feed_seed3",
+      "at": 1767214800000,
+      "kind": "atlas",
+      "playerId": "p2",
+      "playerName": "Мирабель",
+      "text": "🌳 Мирабель изучила пассивку 🪙 Золотая лихорадка.",
+      "meta": {}
+    },
+    {
+      "id": "feed_seed4",
+      "at": 1767211200000,
+      "kind": "fragment",
+      "playerId": "p5",
+      "playerName": "Кай",
+      "text": "💠 Кай сдал фрагмент в Реликварий (4/4).",
+      "meta": {}
+    },
+    {
+      "id": "feed_seed5",
+      "at": 1767207600000,
+      "kind": "join",
+      "playerId": "p6",
+      "playerName": "Нокс",
+      "text": "🎲 Нокс присоединился к Убежищу Изгнанников.",
+      "meta": {}
+    }
+  ],
+  "meta_seed": {
+    "friends": 6
+  }
+}
