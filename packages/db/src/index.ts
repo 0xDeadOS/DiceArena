@@ -5,3 +5,5 @@ export { PrismaRoomRepository } from './rooms.js';
 export type { RoomRepository } from './rooms.js';
 export { Prisma } from './generated/prisma/client.js';
 export type { PrismaClient } from './generated/prisma/client.js';
+export { PrismaGameRepository } from './game.js';
+export type { GameRepository, GameCommand } from './game.js';

@@ -70,6 +70,7 @@ export interface HubDTO {
     firstName: string;
     username: string | null;
     gold: number;
+    facetDust: number;
     sealFragments: number;
     equippedDieId: string | null;
     vigor: { current: number; maximum: number; nextRestoreAt: string };
@@ -103,4 +104,116 @@ export interface SessionDTO {
 
 export interface ApiErrorDTO {
   error: { code: string; message: string; requestId: string };
+}
+
+export const ENEMY_TYPES = [
+  'SLIME',
+  'SPEARMAN',
+  'PLAGUE_RAT',
+  'STONE_GUARD',
+  'BLOOD_PRIEST',
+  'BONE_KING',
+] as const;
+export type EnemyType = (typeof ENEMY_TYPES)[number];
+export type BattleDecision = 'DIRECT' | 'SHIFT' | 'FLIP' | 'REROLL';
+export type CombatDie = Pick<
+  DieDTO,
+  'id' | 'baseType' | 'ilvl' | 'quality' | 'rarity' | 'faces' | 'affixes' | 'powerScore'
+>;
+export type CombatOutcome = 'VICTORY' | 'DEFEAT';
+export interface EnemyIntent {
+  kind: 'ATTACK' | 'GUARD' | 'WINDUP' | 'POISON_ATTACK' | 'SHIELD_BASH' | 'CURSE';
+  label: string;
+  value: number;
+  baseValue: number;
+  heal: number;
+  poison: number;
+  thorns: number;
+  lifestealPercent: number;
+}
+export interface PoisonEffect {
+  damage: number;
+  turns: number;
+}
+export interface CombatEffects {
+  playerPoison: PoisonEffect;
+  enemyPoison: PoisonEffect;
+  weaknessTurns: number;
+  enemyThorns: number;
+}
+export interface CombatLogEntry {
+  turn: number;
+  message: string;
+}
+export interface CombatState {
+  state: 'AWAITING_ROLL' | 'AWAITING_DECISION' | 'FINISHED';
+  currentRolledFace: number | null;
+  focusCharges: number;
+  rerollsLeft: number;
+  turnNumber: number;
+  playerHp: number;
+  playerMaxHp: number;
+  playerShield: number;
+  enemyType: EnemyType;
+  enemyHp: number;
+  enemyMaxHp: number;
+  enemyShield: number;
+  currentIntent: EnemyIntent;
+  effects: CombatEffects;
+  outcome: CombatOutcome | null;
+  log: CombatLogEntry[];
+}
+export interface FacePlay {
+  face: number;
+  action: FaceAction;
+  value: number;
+}
+export interface BattleDTO extends CombatState {
+  id: string;
+  enemyName: string;
+  options: { direct: FacePlay; shift: FacePlay | null; flip: FacePlay } | null;
+}
+export type MapNodeType = 'START' | 'BATTLE' | 'ELITE' | 'CHEST' | 'CAMP' | 'BOSS';
+export interface MapNodeDTO {
+  id: string;
+  depth: number;
+  lane: number;
+  type: MapNodeType;
+  next: string[];
+}
+export interface TrainingLoot {
+  gold: number;
+  dust: number;
+}
+export interface RunDTO {
+  id: string;
+  revision: number;
+  mode: 'TRAINING';
+  status: 'IN_PROGRESS' | 'VICTORY' | 'DEFEAT';
+  currentNodeId: string;
+  visitedNodeIds: string[];
+  nodes: MapNodeDTO[];
+  availableNodeIds: string[];
+  playerHp: number;
+  playerMaxHp: number;
+  loadout: CombatDie;
+  loot: TrainingLoot;
+  reward: TrainingLoot | null;
+  battle: BattleDTO | null;
+}
+export interface RunResponse {
+  run: RunDTO | null;
+}
+export interface RunMutation {
+  runId: string;
+  expectedRevision: number;
+}
+export interface MapStepRequest extends RunMutation {
+  nodeId: string;
+}
+export interface BattleRollRequest extends RunMutation {
+  battleId: string;
+}
+export interface BattleDecisionRequest extends BattleRollRequest {
+  action: BattleDecision;
 }

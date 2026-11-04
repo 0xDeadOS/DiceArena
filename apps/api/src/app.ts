@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import type { ProfileRepository } from '@dicebound/db';
+import { GameRuleError } from '@dicebound/game-core';
+import { gameRoutes } from './routes/game.js';
+import type { GameRepository, ProfileRepository } from '@dicebound/db';
 import type { ApiErrorDTO, HubDTO, SessionDTO } from '@dicebound/shared-types';
 import { verifyAuthorization } from './auth/init-data.js';
 import type { VerifiedLaunch } from './auth/init-data.js';
@@ -17,6 +19,7 @@ declare module 'fastify' {
 
 export interface AppDependencies {
   profiles: ProfileRepository;
+  game?: GameRepository;
   membership: MembershipChecker;
   botToken: string;
   maxInitDataAgeSeconds?: number;
@@ -57,7 +60,8 @@ export async function buildApp(deps: AppDependencies) {
     let status = 500;
     let code = 'INTERNAL_ERROR';
     let message = 'Сервис временно недоступен. Попробуйте позже.';
-    if (error instanceof AppError) ({ status, code, message } = error);
+    if (error instanceof AppError || error instanceof GameRuleError)
+      ({ status, code, message } = error);
     else if (error instanceof Error && 'statusCode' in error && error.statusCode === 429) {
       status = 429;
       code = 'RATE_LIMITED';
@@ -149,5 +153,13 @@ export async function buildApp(deps: AppDependencies) {
       return hub;
     },
   );
+  if (deps.game)
+    gameRoutes(app, {
+      game: deps.game,
+      profiles: deps.profiles,
+      membership: deps.membership,
+      clock,
+      hooks: [signedLaunch, userLimit],
+    });
   return app;
 }

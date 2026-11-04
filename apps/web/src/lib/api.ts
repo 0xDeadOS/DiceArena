@@ -1,22 +1,47 @@
 import type { ApiErrorDTO } from '@dicebound/shared-types';
-
+export type GamePath =
+  | '/api/map/start'
+  | '/api/map/step'
+  | '/api/map/retreat'
+  | '/api/battle/roll'
+  | '/api/battle/decision';
+export type ApiPath = GamePath | '/api/map/current' | '/api/auth/session' | '/api/hub';
+export interface Mutation {
+  key: string;
+  body: Record<string, unknown>;
+}
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 export async function apiRequest<T>(
-  path: '/api/auth/session' | '/api/hub',
+  path: ApiPath,
   initData: string,
+  mutation?: Mutation,
 ): Promise<T> {
+  const post = path === '/api/auth/session' || !!mutation;
   const response = await fetch(path, {
-    method: path.endsWith('/session') ? 'POST' : 'GET',
+    method: post ? 'POST' : 'GET',
     headers: {
       Authorization: `tma ${initData}`,
-      ...(path.endsWith('/session') ? { 'Content-Type': 'application/json' } : {}),
+      ...(post ? { 'Content-Type': 'application/json' } : {}),
+      ...(mutation ? { 'Idempotency-Key': mutation.key } : {}),
     },
-    ...(path.endsWith('/session') ? { body: '{}' } : {}),
+    ...(post ? { body: JSON.stringify(mutation?.body ?? {}) } : {}),
     signal: AbortSignal.timeout(12_000),
     cache: 'no-store',
   });
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as ApiErrorDTO | null;
-    throw new Error(
+    throw new ApiError(
+      response.status,
+      payload?.error?.code ?? 'REQUEST_FAILED',
       payload?.error?.message ?? 'Не удалось связаться с Обителью. Попробуйте ещё раз.',
     );
   }

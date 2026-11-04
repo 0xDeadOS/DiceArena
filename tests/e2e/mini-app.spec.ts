@@ -1,25 +1,6 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { fixtureHub, signedInitData } from '../fixtures.js';
-
-async function telegramLaunch(page: Page) {
-  const initData = signedInitData();
-  await page.addInitScript((raw) => {
-    Object.assign(window, {
-      Telegram: {
-        WebApp: {
-          initData: raw,
-          ready() {},
-          expand() {},
-          setHeaderColor() {},
-          setBackgroundColor() {},
-          BackButton: { show() {}, hide() {}, onClick() {}, offClick() {} },
-        },
-      },
-    });
-  }, initData);
-  return initData;
-}
+import { telegramLaunch } from './helpers.js';
+import { fixtureHub } from '../fixtures.js';
 
 test('browser preview is explicit and never calls protected API', async ({ page }) => {
   const calls: string[] = [];
@@ -34,7 +15,7 @@ test('browser preview is explicit and never calls protected API', async ({ page 
   await expect(page.getByText('150', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Как играть', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByText('Боевой бросок ещё не доступен.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Бросок сохраняется на сервере.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click();
   expect(calls).toEqual([]);
   expect(errors).toEqual([]);

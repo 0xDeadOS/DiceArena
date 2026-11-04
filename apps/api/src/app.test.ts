@@ -137,7 +137,7 @@ describe('Fastify API boundary', () => {
     profiles.isReady.mockRejectedValue(new Error('secret connection URL'));
     expect((await app.inject('/health/ready')).statusCode).toBe(503);
   });
-  it('does not pretend the future game endpoints are implemented', async () => {
+  it('does not mount gameplay without its repository', async () => {
     const { app } = await setup();
     expect(
       (await app.inject({ method: 'POST', url: '/api/battle/roll', headers: headers() }))

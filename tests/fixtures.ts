@@ -42,6 +42,7 @@ export function fixtureHub(): HubDTO {
       firstName: 'Алиса',
       username: 'alice',
       gold: 150,
+      facetDust: 0,
       sealFragments: 0,
       equippedDieId: '0d41408b-c36e-4703-b43b-1ca7bb230f08',
       vigor: { current: 3, maximum: 6, nextRestoreAt: '2026-11-05T00:00:00.000Z' },

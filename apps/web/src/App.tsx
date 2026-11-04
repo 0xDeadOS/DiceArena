@@ -27,6 +27,7 @@ import type { DieDTO, SphereType } from '@dicebound/shared-types';
 import { useSession } from './stores/session';
 import { Hub } from './screens/Hub';
 import { Inventory } from './screens/Inventory';
+import { Expeditions } from './screens/Expeditions';
 import { Wallet } from './screens/Wallet';
 import { Modal } from './components/Modal';
 import { DieDetail } from './components/DieDetail';
@@ -34,7 +35,7 @@ import { DieSculpture } from './components/Die';
 import { Orb } from './components/Orb';
 import { SPHERES } from './lib/catalog';
 
-type Page = 'hub' | 'inventory' | 'wallet';
+type Page = 'hub' | 'inventory' | 'wallet' | 'expeditions';
 type ModalKind =
   | 'entry'
   | 'rules'
@@ -46,6 +47,11 @@ type ModalKind =
   | 'die'
   | `sphere:${SphereType}`;
 const TITLES: Record<Page, { title: string; subtitle: string; breadcrumb: string }> = {
+  expeditions: {
+    title: 'За порогом Обители',
+    subtitle: 'Один бросок. Четыре способа изменить судьбу.',
+    breadcrumb: 'ТРЕНИРОВОЧНЫЕ КАТАКОМБЫ',
+  },
   hub: { title: 'У костра', subtitle: 'Вдохните. Вы дома, искатель.', breadcrumb: 'ОБЗОР ОБИТЕЛИ' },
   inventory: {
     title: 'Сумка искателя',
@@ -134,8 +140,7 @@ export function App() {
       key: 'expeditions',
       label: 'Походы',
       icon: Compass,
-      action: () => setModal('expeditions'),
-      soon: true,
+      action: () => navigate('expeditions'),
     },
     {
       key: 'workshop',
@@ -216,7 +221,7 @@ export function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="development-card">
-            <span className="eyebrow">ПРОЛОГ · ВЕРСИЯ 0.1</span>
+            <span className="eyebrow">ПРОЛОГ · ПЕРВЫЙ СПУСК</span>
             <h3>Собираемся в путь.</h3>
             <p>
               Хорошие истории
@@ -231,7 +236,7 @@ export function App() {
             <BookOpen size={17} /> Полевой справочник <ArrowUpRight size={13} />
           </button>
           <div className="sidebar-footer">
-            <span className="online-dot" /> Этап 1 · Основание
+            <span className="online-dot" /> Этап 2 · Тренировка
           </div>
         </div>
       </aside>
@@ -322,11 +327,12 @@ export function App() {
               onWallet={() => navigate('wallet')}
               onRules={() => setModal('rules')}
               onRaid={() => setModal('raid')}
-              onExpeditions={() => setModal('expeditions')}
+              onExpeditions={() => navigate('expeditions')}
               onDie={inspect}
               onSphere={(type) => setModal(`sphere:${type}`)}
             />
           )}
+          {page === 'expeditions' && <Expeditions onEntry={() => setModal('entry')} />}
           {page === 'inventory' && <Inventory hub={hub} />}
           {page === 'wallet' && (
             <Wallet
@@ -344,7 +350,7 @@ export function App() {
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Мобильная навигация">
-        {navItems.slice(0, 3).map(({ key, label, icon: Icon, action }) => (
+        {navItems.slice(0, 4).map(({ key, label, icon: Icon, action }) => (
           <button
             key={key}
             onClick={action}
@@ -355,10 +361,6 @@ export function App() {
             <span>{label}</span>
           </button>
         ))}
-        <button onClick={() => setModal('raid')}>
-          <Hexagon size={20} />
-          <span>Рейд</span>
-        </button>
         <button onClick={() => setModal('rules')}>
           <BookOpen size={20} />
           <span>Справочник</span>
@@ -427,7 +429,7 @@ export function App() {
             </div>
           ) : modal === 'rules' ? (
             <div className="prose">
-              <span className="stage-label">МЕХАНИКИ СЛЕДУЮЩЕГО ЭТАПА</span>
+              <span className="stage-label">ТРЕНИРОВКА · ЧЕТЫРЕ РЕШЕНИЯ</span>
               <p>
                 Враг показывает намерение. Вы бросаете кубик — и решаете, как разыграть результат.
               </p>
@@ -450,22 +452,25 @@ export function App() {
                   <span>03</span>
                   <div>
                     <h3>Перевернуть</h3>
-                    <p>Потратьте 1 концентрацию на противоположную грань: 1 ↔ 6, 2 ↔ 5, 3 ↔ 4.</p>
+                    <p>
+                      Потратьте 1 концентрацию и сразу разыграйте противоположную грань: 1 ↔ 6, 2 ↔
+                      5, 3 ↔ 4. Концентрация не возвращается.
+                    </p>
                   </div>
                 </div>
                 <div>
                   <span>04</span>
                   <div>
                     <h3>Перебросить</h3>
-                    <p>Один бесплатный переброс за бой — для особенного момента.</p>
+                    <p>Один бесплатный переброс за бой. Меняет грань, но не завершает ход.</p>
                   </div>
                 </div>
               </div>
               <div className="notice">
                 <Dices size={20} />
                 <span>
-                  В этой версии можно осмотреть пары граней в инвентаре. Боевой бросок ещё не
-                  доступен.
+                  Бросок сохраняется на сервере. Закрыть и открыть приложение — не способ
+                  перебросить грань. В браузерном обзоре бой доступен только для просмотра.
                 </span>
               </div>
               <button
@@ -481,8 +486,8 @@ export function App() {
           ) : modal === 'roadmap' ? (
             <div className="prose">
               <p>
-                Сейчас готово основание игры. Остальные системы будут добавляться поэтапно — без
-                подмены игры случайными числами в браузере.
+                Готовы Обитель и первый тренировочный поход. Остальные системы добавляются поэтапно
+                — без подмены игры случайными числами в браузере.
               </p>
               <div className="roadmap-list">
                 {[
@@ -490,13 +495,16 @@ export function App() {
                     'Ваша Обитель',
                     'Вход через Telegram, отдельный профиль, стартовый комплект и хаб.',
                   ],
-                  ['Бросок и манёвр', 'Серверный бой, намерения врагов и ветвящиеся маршруты.'],
+                  [
+                    'Бросок и манёвр',
+                    'Серверный бой и бесплатный тренировочный маршрут из семи уровней.',
+                  ],
                   ['Маленькая алхимия', 'Шесть сфер, крафт граней и огранка у Мастера.'],
                   ['Общая легенда', 'Асинхронные рейды, зал славы и редкие анонсы в чат.'],
                 ].map(([title, text], index) => (
                   <div key={title}>
-                    <span className={`roadmap-step ${index === 0 ? 'complete' : ''}`}>
-                      {index === 0 ? <Check size={17} /> : `0${index + 1}`}
+                    <span className={`roadmap-step ${index <= 1 ? 'complete' : ''}`}>
+                      {index <= 1 ? <Check size={17} /> : `0${index + 1}`}
                     </span>
                     <div>
                       <h3>{title}</h3>
@@ -506,45 +514,47 @@ export function App() {
                 ))}
               </div>
             </div>
+          ) : modal === 'expeditions' ? (
+            <div className="prose">
+              <div className="notice">
+                <Sun size={22} />
+                <span>
+                  Бодрость: {hub.player.vigor.current} из {hub.player.vigor.maximum}. Восстановление
+                  +3 каждый день UTC, максимум 6.
+                </span>
+              </div>
+              <p>
+                Тренировочные катакомбы не расходуют бодрость. Можно играть при любом её запасе;
+                награды — небольшое количество золота и пыли.
+              </p>
+              <p>Обычные походы с усиленной добычей и выпадением снаряжения появятся позже.</p>
+              <button
+                className="button primary full"
+                onClick={() => {
+                  setModal(null);
+                  navigate('expeditions');
+                }}
+              >
+                К тренировкам <Map size={17} />
+              </button>
+            </div>
           ) : (
             <div className="prose">
               <span className="stage-label">
-                {modal === 'expeditions'
-                  ? 'ЭТАП 2 · В РАЗРАБОТКЕ'
-                  : modal === 'workshop'
-                    ? 'ЭТАП 3 · В РАЗРАБОТКЕ'
-                    : 'ЭТАП 4 · В РАЗРАБОТКЕ'}
+                {modal === 'workshop' ? 'ЭТАП 3 · В РАЗРАБОТКЕ' : 'ЭТАП 4 · В РАЗРАБОТКЕ'}
               </span>
               <div className="planned-emblem">
-                {modal === 'expeditions' ? (
-                  <Map />
-                ) : modal === 'workshop' ? (
-                  <Hammer />
-                ) : modal === 'raid' ? (
-                  <Hexagon />
-                ) : (
-                  <Crown />
-                )}
+                {modal === 'workshop' ? <Hammer /> : modal === 'raid' ? <Hexagon /> : <Crown />}
               </div>
               <p>
-                {modal === 'expeditions'
-                  ? 'Одиночные маршруты из 7–9 уровней: бои, элиты, сундуки, привалы и босс карты. Можно закрыть приложение и продолжить позже.'
-                  : modal === 'workshop'
-                    ? 'Вся сила героя — в одном кубике. Меняйте грани, улучшайте качество и собирайте сочетания свойств. Шесть сфер уже ждут в кошельке.'
-                    : modal === 'raid'
-                      ? 'Соберите 15 фрагментов печати всей Обителью и пробудите общего босса. Рейд продлится 48 часов — быть онлайн одновременно не нужно.'
-                      : 'Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые помогли выиграть бой за последние семь дней.'}
+                {modal === 'workshop'
+                  ? 'Вся сила героя — в одном кубике. Меняйте грани, улучшайте качество и собирайте сочетания свойств. Шесть сфер уже ждут в кошельке.'
+                  : modal === 'raid'
+                    ? 'Соберите 15 фрагментов печати всей Обителью и пробудите общего босса. Рейд продлится 48 часов — быть онлайн одновременно не нужно.'
+                    : 'Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые помогли выиграть бой за последние семь дней.'}
               </p>
               <div className="notice">
-                {modal === 'expeditions' ? (
-                  <>
-                    <Sun size={21} />
-                    <span>
-                      Бодрость: {hub.player.vigor.current} из {hub.player.vigor.maximum}. Ежедневно
-                      +3, максимум 6. Без бодрости можно играть с уменьшенными наградами.
-                    </span>
-                  </>
-                ) : modal === 'raid' ? (
+                {modal === 'raid' ? (
                   <>
                     <Users size={21} />
                     <span>
@@ -556,8 +566,8 @@ export function App() {
                   <>
                     <Sparkles size={21} />
                     <span>
-                      Сейчас доступны хаб, осмотр кубика и кошелёк. Этот раздел пока не меняет
-                      игровой прогресс.
+                      Уже доступны хаб, инвентарь, кошелёк и тренировочные бои. Этот раздел пока не
+                      меняет игровой прогресс.
                     </span>
                   </>
                 )}

@@ -1,4 +1,10 @@
-import { ArrowUpRight, FlaskConical, Infinity as InfinityIcon } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Coins,
+  Sparkles,
+  FlaskConical,
+  Infinity as InfinityIcon,
+} from 'lucide-react';
 import type { HubDTO, SphereType } from '@dicebound/shared-types';
 import { Orb } from '../components/Orb';
 import { SPHERES } from '../lib/catalog';
@@ -22,6 +28,17 @@ export function Wallet({
         <span className="count-tag">
           <InfinityIcon size={17} /> Без лимита
         </span>
+      </div>
+      <div className="wallet-resources">
+        <span>
+          <Coins size={18} />
+          {hub.player.gold} золота
+        </span>
+        <span>
+          <Sparkles size={18} />
+          {hub.player.facetDust} пыли граней
+        </span>
+        <small>Пыль сохраняется для будущей Мастерской.</small>
       </div>
       <div className="wallet-grid">
         {hub.inventory.spheres.map(({ type, amount }) => (

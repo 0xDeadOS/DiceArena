@@ -162,6 +162,7 @@ export class PrismaProfileRepository implements ProfileRepository {
         firstName: member.user.firstName,
         username: member.user.username,
         gold: member.gold,
+        facetDust: member.facetDust,
         sealFragments: member.sealFragments,
         equippedDieId: member.equippedDieId,
         tutorialDone: member.tutorialDone,

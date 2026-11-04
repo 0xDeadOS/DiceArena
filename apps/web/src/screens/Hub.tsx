@@ -109,10 +109,10 @@ export function Hub({
           <div>
             <span className="eyebrow">ЗА ПОРОГОМ ОБИТЕЛИ</span>
             <h3>Тренировочные катакомбы</h3>
-            <p>Первый спуск. Ваш кубик. Ваши решения.</p>
+            <p>Семь уровней. Без затрат бодрости.</p>
           </div>
           <button className="upcoming-button" onClick={onExpeditions}>
-            Скоро <ArrowUpRight size={15} />
+            {hub.activeRun ? 'Продолжить' : 'В путь'} <ArrowUpRight size={15} />
           </button>
         </section>
       </div>

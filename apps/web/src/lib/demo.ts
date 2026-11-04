@@ -15,6 +15,7 @@ export function demoHub(): HubDTO {
       firstName: 'Странник',
       username: null,
       gold: 150,
+      facetDust: 0,
       sealFragments: 0,
       equippedDieId: 'demo-die',
       vigor: {

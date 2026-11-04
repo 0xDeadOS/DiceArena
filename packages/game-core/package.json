@@ -1,7 +1,8 @@
 {
   "name": "@dicebound/game-core",
   "dependencies": {
-    "@dicebound/shared-types": "*"
+    "@dicebound/shared-types": "*",
+    "zod": "^4.1.12"
   },
   "version": "0.1.0",
   "private": true,

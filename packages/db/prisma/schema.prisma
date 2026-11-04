@@ -44,6 +44,11 @@ enum BattleState {
   FINISHED
 }
 
+enum BattleOutcome {
+  VICTORY
+  DEFEAT
+}
+
 enum RaidStatus {
   ACTIVE
   DEFEATED
@@ -89,6 +94,7 @@ model RoomMember {
   equippedDieId      String?             @unique @db.Uuid
   vigorUpdatedAt     DateTime            @default(now()) @db.Timestamptz(3)
   storedVigor        Int                 @default(3)
+  facetDust          Int                 @default(0)
   tutorialDone       Boolean             @default(false)
   createdAt          DateTime            @default(now()) @db.Timestamptz(3)
   room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -146,6 +152,11 @@ model MapRun {
   hasVigorBoost   Boolean    @default(true)
   status          RunStatus  @default(IN_PROGRESS)
   currentNodeId   String     @default("start")
+  revision        Int        @default(0)
+  dieSnapshot     Json?
+  visitedNodeIds  Json       @default("[]")
+  settledLoot     Json?
+  lootSettledAt   DateTime?  @db.Timestamptz(3)
   dagMapData      Json
   playerHp        Int
   playerMaxHp     Int
@@ -161,24 +172,28 @@ model MapRun {
 }
 
 model Battle {
-  id                String      @id @default(uuid()) @db.Uuid
-  runId             String      @db.Uuid
-  battleSeed        String      @db.Char(64)
-  stepIndex         Int         @default(0)
-  state             BattleState @default(AWAITING_ROLL)
+  id                String         @id @default(uuid()) @db.Uuid
+  runId             String         @db.Uuid
+  battleSeed        String         @db.Char(64)
+  stepIndex         Int            @default(0)
+  state             BattleState    @default(AWAITING_ROLL)
   currentRolledFace Int?
-  rerollsLeft       Int         @default(1)
-  focusCharges      Int         @default(0)
+  rerollsLeft       Int            @default(1)
+  focusCharges      Int            @default(0)
   enemyType         String
   enemyHp           Int
   enemyMaxHp        Int
-  enemyShield       Int         @default(0)
-  playerShield      Int         @default(0)
+  enemyShield       Int            @default(0)
+  playerShield      Int            @default(0)
   currentIntent     Json
-  turnNumber        Int         @default(1)
-  effects           Json        @default("{}")
-  mapRun            MapRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  turnNumber        Int            @default(1)
+  effects           Json           @default("{}")
+  nodeId            String?
+  outcome           BattleOutcome?
+  log               Json           @default("[]")
+  mapRun            MapRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
 
+  @@unique([runId, nodeId])
   @@index([runId])
 }
 

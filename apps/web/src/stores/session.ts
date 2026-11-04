@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { HubDTO, SessionDTO } from '@dicebound/shared-types';
 import { loadTelegram } from '../lib/telegram';
 import { apiRequest } from '../lib/api';
+import type { ApiPath, Mutation } from '../lib/api';
 import { demoHub } from '../lib/demo';
 
 interface SessionState {
@@ -15,6 +16,7 @@ interface SessionState {
   viewDemo: () => void;
 }
 let pending: Promise<void> | null = null;
+let generation = 0;
 // Sensitive initData is kept in memory only, never local/session storage or logs.
 let initData = '';
 
@@ -26,10 +28,13 @@ export const useSession = create<SessionState>((set, get) => ({
   refreshing: false,
   initialize: () => {
     if (pending) return pending;
-    pending = (async () => {
-      set({ status: 'loading', error: null });
+    const token = ++generation;
+    initData = '';
+    set({ status: 'loading', hub: null, error: null, refreshing: false });
+    const request = (async () => {
       try {
         const telegram = await loadTelegram();
+        if (token !== generation) return;
         if (!telegram?.initData) {
           get().viewDemo();
           return;
@@ -41,31 +46,51 @@ export const useSession = create<SessionState>((set, get) => ({
         initData = telegram.initData;
         set({ mode: 'telegram' });
         const session = await apiRequest<SessionDTO>('/api/auth/session', initData);
-        set({ hub: session.hub, status: 'ready' });
+        if (token === generation) set({ hub: session.hub, status: 'ready' });
       } catch (error) {
+        if (token !== generation) return;
+        initData = '';
         set({
           status: 'error',
           error: error instanceof Error ? error.message : 'Не удалось открыть Обитель.',
         });
       }
     })().finally(() => {
-      pending = null;
+      if (pending === request) pending = null;
     });
-    return pending;
+    pending = request;
+    return request;
   },
   refresh: async () => {
-    if (get().mode === 'demo' || get().refreshing) return;
+    if (get().mode !== 'telegram' || get().status !== 'ready' || get().refreshing || !initData)
+      return;
+    const token = generation;
     set({ refreshing: true, error: null });
     try {
-      set({ hub: await apiRequest<HubDTO>('/api/hub', initData) });
+      const hub = await apiRequest<HubDTO>('/api/hub', initData);
+      if (token === generation) set({ hub });
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Не удалось обновить данные.' });
+      if (token === generation)
+        set({ error: error instanceof Error ? error.message : 'Не удалось обновить данные.' });
     } finally {
-      set({ refreshing: false });
+      if (token === generation) set({ refreshing: false });
     }
   },
   viewDemo: () => {
+    generation++;
+    pending = null;
     initData = '';
-    set({ status: 'ready', mode: 'demo', hub: demoHub(), error: null });
+    set({ status: 'ready', mode: 'demo', hub: demoHub(), error: null, refreshing: false });
   },
 }));
+
+/** Authorized calls without exposing initData in components or persistent storage. */
+export function sessionRequest<T>(path: ApiPath, mutation?: Mutation): Promise<T> {
+  if (
+    useSession.getState().mode !== 'telegram' ||
+    useSession.getState().status !== 'ready' ||
+    !initData
+  )
+    return Promise.reject(new Error('Откройте игру через Telegram.'));
+  return apiRequest<T>(path, initData, mutation);
+}

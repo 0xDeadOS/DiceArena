@@ -1,55 +1,30 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import pg from 'pg';
-import { createDatabase, PrismaProfileRepository, PrismaRoomRepository } from '../src/index.js';
+import type { PrismaProfileRepository, PrismaRoomRepository } from '../src/index.js';
+import { databaseHarness } from './harness.js';
+import type { DatabaseHarness } from './harness.js';
 import type { PrismaClient } from '../src/index.js';
 import { starterFaces } from '../../game-core/src/index.js';
 import { buildApp } from '../../../apps/api/src/app.js';
 import { NOW, signedInitData, TEST_TOKEN } from '../../../tests/fixtures.js';
 
-const rawUrl = process.env.TEST_DATABASE_URL;
-if (!rawUrl) throw new Error('Set TEST_DATABASE_URL to a separate PostgreSQL test database.');
-const url = new URL(rawUrl);
-if (!url.pathname.endsWith('_test'))
-  throw new Error(
-    'Integration database name must end in _test. Production databases are never used.',
-  );
-const schema = `test_${randomUUID().replaceAll('-', '')}`;
-url.searchParams.set('schema', schema);
+let harness: DatabaseHarness;
 let db: PrismaClient;
-let admin: pg.Client;
 let profiles: PrismaProfileRepository;
 let rooms: PrismaRoomRepository;
 const alice = { id: 42, firstName: 'Алиса', username: 'alice' };
 const bob = { id: 43, firstName: 'Боб', username: null };
 
 beforeAll(async () => {
-  admin = new pg.Client({ connectionString: rawUrl });
-  await admin.connect();
-  await admin.query(`CREATE SCHEMA "${schema}"`);
-  await admin.query(`SET search_path TO "${schema}"`);
-  const migration = await readFile(
-    new URL('../prisma/migrations/20261104000000_initial/migration.sql', import.meta.url),
-    'utf8',
-  );
-  await admin.query(migration);
-  db = createDatabase(url.toString());
-  await db.$connect();
-  profiles = new PrismaProfileRepository(db);
-  rooms = new PrismaRoomRepository(db);
+  harness = await databaseHarness();
+  ({ db, profiles, rooms } = harness);
 });
-
 beforeEach(async () => {
-  await admin.query('TRUNCATE TABLE "Room", "User" CASCADE');
+  await harness.reset();
 });
 afterAll(async () => {
-  await db?.$disconnect();
-  if (admin) {
-    await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-    await admin.end();
-  }
+  await harness?.close();
 });
 const room = () => rooms.ensureRoom(-1001234567890n, 'Обитель друзей', 'r_abcdefgh');
 const dieData = (ownerId: string) => ({
@@ -124,7 +99,7 @@ describe('PostgreSQL 16 foundation', () => {
 
   it('rolls back the entire registration if a later wallet write fails', async () => {
     const context = await room();
-    await admin.query(
+    await harness.admin.query(
       'ALTER TABLE "UserCurrency" ADD CONSTRAINT test_wallet_failure CHECK ("amount" = 0) NOT VALID',
     );
     try {
@@ -133,7 +108,7 @@ describe('PostgreSQL 16 foundation', () => {
       expect(await db.roomMember.count()).toBe(0);
       expect(await db.die.count()).toBe(0);
     } finally {
-      await admin.query('ALTER TABLE "UserCurrency" DROP CONSTRAINT test_wallet_failure');
+      await harness.admin.query('ALTER TABLE "UserCurrency" DROP CONSTRAINT test_wallet_failure');
     }
     expect((await profiles.openSession(context, alice, NOW)).inventory.dice).toHaveLength(1);
   });
