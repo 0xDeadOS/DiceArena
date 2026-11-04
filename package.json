@@ -1,0 +1,47 @@
+{
+  "name": "dicebound",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dicebound: Chat Raiders — Telegram Mini App",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:server && concurrently -k -n api,bot,web -c yellow,cyan,magenta \"npm run dev -w @dicebound/api\" \"npm run dev -w @dicebound/bot\" \"npm run dev -w @dicebound/web\"",
+    "dev:web": "npm run dev -w @dicebound/web",
+    "dev:api": "npm run build:server && npm run dev -w @dicebound/api",
+    "dev:bot": "npm run build:server && npm run dev -w @dicebound/bot",
+    "build:server": "tsc -b packages/shared-types packages/game-core packages/db apps/api apps/bot",
+    "build": "npm run db:generate && npm run build:server && npm run build -w @dicebound/web",
+    "typecheck": "npm run build:server && npm run typecheck -w @dicebound/web && tsc -p tsconfig.tests.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:generate": "prisma generate --schema packages/db/prisma/schema.prisma",
+    "db:validate": "prisma validate --schema packages/db/prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy --schema packages/db/prisma/schema.prisma",
+    "db:dev": "prisma migrate dev --schema packages/db/prisma/schema.prisma",
+    "db:studio": "prisma studio --schema packages/db/prisma/schema.prisma",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run db:generate && npm run typecheck && npm test && npm run format:check",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.19.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.2.3",
+    "prettier": "^3.6.2",
+    "prisma": "7.10.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vitest": "^4.1.12"
+  },
+  "packageManager": "npm@11.6.2"
+}

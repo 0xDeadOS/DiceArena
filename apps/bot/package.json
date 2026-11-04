@@ -1,0 +1,22 @@
+{
+  "name": "@dicebound/bot",
+  "dependencies": {
+    "@dicebound/db": "*",
+    "dotenv": "^17.2.3",
+    "grammy": "^1.38.3",
+    "nanoid": "^5.1.6",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  }
+}

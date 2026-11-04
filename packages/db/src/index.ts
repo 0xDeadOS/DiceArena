@@ -1,0 +1,7 @@
+export { createDatabase } from './client.js';
+export { PrismaProfileRepository } from './profiles.js';
+export type { ProfileRepository } from './profiles.js';
+export { PrismaRoomRepository } from './rooms.js';
+export type { RoomRepository } from './rooms.js';
+export { Prisma } from './generated/prisma/client.js';
+export type { PrismaClient } from './generated/prisma/client.js';

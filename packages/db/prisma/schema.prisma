@@ -1,0 +1,242 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rarity {
+  NORMAL
+  MAGIC
+  RARE
+  UNIQUE
+}
+
+enum DieBase {
+  BONE
+  IRON
+  OBSIDIAN
+}
+
+enum SphereType {
+  TEMPERING
+  FACETING
+  CASTING
+  ASCENDANCE
+  RESHAPING
+  CLEANSING
+}
+
+enum RunStatus {
+  IN_PROGRESS
+  VICTORY
+  DEFEAT
+}
+
+enum BattleState {
+  AWAITING_ROLL
+  AWAITING_DECISION
+  FINISHED
+}
+
+enum RaidStatus {
+  ACTIVE
+  DEFEATED
+  EXPIRED
+}
+
+enum GameEventType {
+  RAID_SUMMONED
+  RAID_DEFEATED
+  HIGH_PS_CRAFT
+}
+
+model Room {
+  id              String         @id @default(uuid()) @db.Uuid
+  slug            String         @unique @db.VarChar(32)
+  telegramChatId  BigInt         @unique
+  title           String
+  timezone        String         @default("UTC")
+  canSendMessages Boolean        @default(true)
+  sealFragments   Int            @default(0)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(3)
+  members         RoomMember[]
+  raidInstances   RaidInstance[]
+  events          GameEvent[]
+}
+
+model User {
+  id             String       @id @default(uuid()) @db.Uuid
+  telegramUserId BigInt       @unique
+  username       String?
+  firstName      String
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  memberships    RoomMember[]
+}
+
+model RoomMember {
+  id                 String              @id @default(uuid()) @db.Uuid
+  roomId             String              @db.Uuid
+  userId             String              @db.Uuid
+  gold               Int                 @default(150)
+  sealFragments      Int                 @default(0)
+  equippedDieId      String?             @unique @db.Uuid
+  vigorUpdatedAt     DateTime            @default(now()) @db.Timestamptz(3)
+  storedVigor        Int                 @default(3)
+  tutorialDone       Boolean             @default(false)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Composite FK prevents equipping a die owned by another member/chat.
+  equippedDie        Die?                @relation("EquippedDie", fields: [equippedDieId, id], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction)
+  dice               Die[]               @relation("OwnedDice")
+  currencies         UserCurrency[]
+  mapRuns            MapRun[]
+  raidAttacks        RaidAttack[]
+  idempotencyRecords IdempotencyRecord[]
+
+  @@unique([roomId, userId])
+  @@unique([equippedDieId, id])
+  @@index([userId])
+}
+
+model Die {
+  id                    String      @id @default(uuid()) @db.Uuid
+  ownerId               String      @db.Uuid
+  baseType              DieBase
+  ilvl                  Int         @default(1)
+  quality               Int         @default(0)
+  rarity                Rarity      @default(NORMAL)
+  faces                 Json
+  affixes               Json        @default("[]")
+  powerScore            Int
+  isStarter             Boolean     @default(false)
+  isLocked              Boolean     @default(false)
+  masterCrafted         Boolean     @default(false)
+  lastVictoryAt         DateTime?   @db.Timestamptz(3)
+  lastVictoryPowerScore Int?
+  createdAt             DateTime    @default(now()) @db.Timestamptz(3)
+  owner                 RoomMember  @relation("OwnedDice", fields: [ownerId], references: [id], onDelete: Cascade)
+  equippedBy            RoomMember? @relation("EquippedDie")
+
+  @@unique([id, ownerId])
+  @@index([ownerId, lastVictoryAt])
+}
+
+model UserCurrency {
+  id         String     @id @default(uuid()) @db.Uuid
+  ownerId    String     @db.Uuid
+  sphereType SphereType
+  amount     Int        @default(0)
+  owner      RoomMember @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, sphereType])
+}
+
+model MapRun {
+  id              String     @id @default(uuid()) @db.Uuid
+  ownerId         String     @db.Uuid
+  seed            String     @db.Char(64)
+  hasVigorBoost   Boolean    @default(true)
+  status          RunStatus  @default(IN_PROGRESS)
+  currentNodeId   String     @default("start")
+  dagMapData      Json
+  playerHp        Int
+  playerMaxHp     Int
+  accumulatedLoot Json       @default("{}")
+  createdAt       DateTime   @default(now()) @db.Timestamptz(3)
+  completedAt     DateTime?  @db.Timestamptz(3)
+  owner           RoomMember @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // One run has many battles, but SQL allows only one unfinished battle.
+  battles         Battle[]
+
+  @@index([ownerId, status])
+  @@index([ownerId, completedAt])
+}
+
+model Battle {
+  id                String      @id @default(uuid()) @db.Uuid
+  runId             String      @db.Uuid
+  battleSeed        String      @db.Char(64)
+  stepIndex         Int         @default(0)
+  state             BattleState @default(AWAITING_ROLL)
+  currentRolledFace Int?
+  rerollsLeft       Int         @default(1)
+  focusCharges      Int         @default(0)
+  enemyType         String
+  enemyHp           Int
+  enemyMaxHp        Int
+  enemyShield       Int         @default(0)
+  playerShield      Int         @default(0)
+  currentIntent     Json
+  turnNumber        Int         @default(1)
+  effects           Json        @default("{}")
+  mapRun            MapRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model RaidInstance {
+  id        String       @id @default(uuid()) @db.Uuid
+  roomId    String       @db.Uuid
+  bossName  String
+  maxHp     Int
+  currentHp Int
+  phase     Int          @default(1)
+  status    RaidStatus   @default(ACTIVE)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime     @db.Timestamptz(3)
+  room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  attacks   RaidAttack[]
+
+  @@index([roomId, status])
+}
+
+model RaidAttack {
+  id          String       @id @default(uuid()) @db.Uuid
+  raidId      String       @db.Uuid
+  memberId    String       @db.Uuid
+  damageDealt Int
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  raid        RaidInstance @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  member      RoomMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt])
+  @@index([raidId, memberId])
+}
+
+model IdempotencyRecord {
+  key            String     @db.Uuid
+  memberId       String     @db.Uuid
+  requestHash    String     @db.Char(64)
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime   @db.Timestamptz(3)
+  member         RoomMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // A key must never replay another player's response.
+  @@id([memberId, key])
+  @@index([expiresAt])
+}
+
+model GameEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  roomId    String        @db.Uuid
+  memberId  String?       @db.Uuid
+  eventType GameEventType
+  dedupKey  String        @unique
+  payload   Json
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  sentAt    DateTime?     @db.Timestamptz(3)
+  attempts  Int           @default(0)
+  room      Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([sentAt, createdAt])
+}
