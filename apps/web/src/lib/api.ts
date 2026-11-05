@@ -15,9 +15,18 @@ export type InventoryPath =
   | '/api/inventory/dismantle'
   | '/api/workshop/craft'
   | '/api/workshop/master-facet';
+export type RaidPath =
+  | '/api/raid'
+  | '/api/leaderboard'
+  | '/api/raid/contribute'
+  | '/api/raid/summon'
+  | '/api/raid/attack'
+  | '/api/raid/decide';
+
 export type ApiPath =
   | GamePath
   | InventoryPath
+  | RaidPath
   | '/api/inventory'
   | '/api/map/current'
   | '/api/auth/session'

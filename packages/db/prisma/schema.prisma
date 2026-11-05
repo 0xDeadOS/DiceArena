@@ -215,29 +215,41 @@ model Battle {
 }
 
 model RaidInstance {
-  id        String       @id @default(uuid()) @db.Uuid
-  roomId    String       @db.Uuid
-  bossName  String
-  maxHp     Int
-  currentHp Int
-  phase     Int          @default(1)
-  status    RaidStatus   @default(ACTIVE)
-  createdAt DateTime     @default(now()) @db.Timestamptz(3)
-  expiresAt DateTime     @db.Timestamptz(3)
-  room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  attacks   RaidAttack[]
+  id           String       @id @default(uuid()) @db.Uuid
+  roomId       String       @db.Uuid
+  summonedById String?      @db.Uuid
+  bossName     String
+  maxHp        Int
+  currentHp    Int
+  shield       Int          @default(0)
+  phase        Int          @default(1)
+  revision     Int          @default(0)
+  status       RaidStatus   @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  expiresAt    DateTime     @db.Timestamptz(3)
+  defeatedAt   DateTime?    @db.Timestamptz(3)
+  room         Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  attacks      RaidAttack[]
 
   @@index([roomId, status])
 }
 
 model RaidAttack {
-  id          String       @id @default(uuid()) @db.Uuid
-  raidId      String       @db.Uuid
-  memberId    String       @db.Uuid
-  damageDealt Int
-  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
-  raid        RaidInstance @relation(fields: [raidId], references: [id], onDelete: Cascade)
-  member      RoomMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  id                String       @id @default(uuid()) @db.Uuid
+  raidId            String       @db.Uuid
+  memberId          String       @db.Uuid
+  attackSeed        String?      @db.Char(64)
+  state             BattleState  @default(AWAITING_ROLL)
+  rollsUsed         Int          @default(0)
+  currentRolledFace Int?
+  round             Int          @default(1)
+  action            String?
+  faceValue         Int?
+  damageDealt       Int          @default(0)
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  finishedAt        DateTime?    @db.Timestamptz(3)
+  raid              RaidInstance @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  member            RoomMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId, createdAt])
   @@index([raidId, memberId])

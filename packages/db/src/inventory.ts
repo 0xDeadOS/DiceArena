@@ -14,6 +14,8 @@ import type {
   TelegramIdentity,
 } from '@dicebound/shared-types';
 import {
+  ANNOUNCE_COOLDOWN_HOURS,
+  HIGH_PS_ANNOUNCE_AT,
   craftDie,
   INVENTORY_CAPACITY,
   craftRejection,
@@ -29,6 +31,7 @@ import {
 } from '@dicebound/game-core';
 import type { PrismaClient, RoomMember } from './generated/prisma/client.js';
 import { json, lockMember, memberCommand } from './transactions.js';
+import { cooldownWindow, enqueueAnnouncement } from './events.js';
 import type { Tx } from './transactions.js';
 import { readLockedHub, toDieDTO } from './profiles.js';
 import { newSecretSeed, secretInt } from './random.js';
@@ -252,10 +255,38 @@ export class PrismaInventoryRepository implements InventoryRepository {
             tutorialCrafted: command.type === 'CRAFT' ? true : undefined,
           },
         });
+        if (result.type === 'CRAFT' || result.type === 'MASTER_FACET')
+          await this.announceHighScore(tx, member, result, now);
         return { inventory: await this.snapshot(tx, updated, now), result };
       },
     );
   }
+  /**
+   * Редкий анонс выдающегося артефакта: не чаще одного на Обитель за 12 часов. Ограничение
+   * даёт сам dedupKey — повтор в том же окне отклоняется уникальным индексом.
+   */
+  private async announceHighScore(
+    tx: Tx,
+    member: RoomMember,
+    result: Extract<InventoryResult, { type: 'CRAFT' | 'MASTER_FACET' }>,
+    now: Date,
+  ) {
+    if (result.after.powerScore < HIGH_PS_ANNOUNCE_AT) return;
+    await enqueueAnnouncement(tx, {
+      id: member.roomId,
+      eventType: 'HIGH_PS_CRAFT',
+      dedupKey: `high-ps:${member.roomId}:${cooldownWindow(now, ANNOUNCE_COOLDOWN_HOURS)}`,
+      memberId: member.id,
+      now,
+      payload: {
+        title: 'Выдающийся артефакт',
+        text: `В Обители создан кубик на ${result.after.powerScore} PS.`,
+        dieId: result.after.id,
+        powerScore: result.after.powerScore,
+      },
+    });
+  }
+
   private async progressCommand(
     tx: Tx,
     member: RoomMember,

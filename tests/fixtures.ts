@@ -4,7 +4,12 @@ import {
   STARTING_SPHERES,
   calculatePowerScore,
 } from '../packages/game-core/src/index.js';
-import type { HubDTO, RoomContext } from '../packages/shared-types/src/index.js';
+import type {
+  HubDTO,
+  LeaderboardDTO,
+  RaidDTO,
+  RoomContext,
+} from '../packages/shared-types/src/index.js';
 
 export const TEST_TOKEN = '123456789:only_for_tests_not_a_real_bot_token';
 export const NOW = new Date('2026-11-04T12:00:00Z');
@@ -79,5 +84,75 @@ export function fixtureHub(): HubDTO {
     },
     activeRun: null,
     raid: null,
+  };
+}
+
+/** Снимок рейда для HTTP-тестов: активный босс, открытый удар, собранный алтарь. */
+export function fixtureRaid(): RaidDTO {
+  return {
+    altar: { fragments: 15, target: 15, ready: true },
+    myFragments: 2,
+    hornsLeft: 2,
+    raid: {
+      id: '5a2f6f0a-4c1e-4c2a-9b1d-2b7f6b0a1c01',
+      bossName: 'Костяной патриарх',
+      status: 'ACTIVE',
+      phase: 2,
+      rounds: Array.from({ length: 6 }, (_, index) => ({
+        round: index + 1,
+        shield: Math.ceil((index + 1) / 2),
+        cleared: index === 0,
+      })),
+      currentHp: 5,
+      roundHp: 8,
+      shield: 1,
+      maxHp: 48,
+      revision: 4,
+      createdAt: NOW.toISOString(),
+      expiresAt: new Date(NOW.getTime() + 47 * 3_600_000).toISOString(),
+      defeatedAt: null,
+      myDamage: 6,
+      totalDamage: 6,
+      contributions: [{ memberId: 'member-1', firstName: 'Алиса', damage: 6, attacks: 1 }],
+      attack: {
+        id: '5a2f6f0a-4c1e-4c2a-9b1d-2b7f6b0a1c02',
+        round: 2,
+        rollsUsed: 1,
+        rerollsLeft: 1,
+        focusCharges: 0,
+        state: 'AWAITING_DECISION',
+        currentRolledFace: 4,
+        options: {
+          direct: { face: 4, action: 'STRIKE', value: 9 },
+          shift: { face: 4, action: 'GUARD', value: 5 },
+          flip: null,
+        },
+        action: null,
+        faceValue: null,
+        damageDealt: 0,
+      },
+    },
+    canContribute: { allowed: false, reason: 'Алтарь печати уже полон.' },
+    canSummon: { allowed: false, reason: 'Рейд Обители уже идёт.' },
+    canAttack: { allowed: true, reason: null },
+  };
+}
+
+export function fixtureLeaderboard(): LeaderboardDTO {
+  const hub = fixtureHub();
+  const die = hub.inventory.dice[0]!;
+  return {
+    windowDays: 7,
+    windowStart: new Date(NOW.getTime() - 7 * 86_400_000).toISOString(),
+    entries: [
+      {
+        dieId: die.id,
+        die,
+        ownerName: 'Алиса',
+        lastVictoryAt: NOW.toISOString(),
+        lastVictoryPowerScore: die.powerScore,
+        qualified: true,
+      },
+    ],
   };
 }

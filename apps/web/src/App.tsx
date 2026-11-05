@@ -21,7 +21,6 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
-  Users,
 } from 'lucide-react';
 import type { DieDTO, SphereType } from '@dicebound/shared-types';
 import { useSession } from './stores/session';
@@ -29,6 +28,7 @@ import { Hub } from './screens/Hub';
 import { Inventory } from './screens/Inventory';
 import { Expeditions } from './screens/Expeditions';
 import { Workshop } from './screens/Workshop';
+import { Raid } from './screens/Raid';
 import { Wallet } from './screens/Wallet';
 import { Modal } from './components/Modal';
 import { DieDetail } from './components/DieDetail';
@@ -36,16 +36,8 @@ import { DieSculpture } from './components/Die';
 import { Orb } from './components/Orb';
 import { SPHERES } from './lib/catalog';
 
-type Page = 'hub' | 'inventory' | 'wallet' | 'expeditions' | 'workshop';
-type ModalKind =
-  | 'entry'
-  | 'rules'
-  | 'roadmap'
-  | 'expeditions'
-  | 'raid'
-  | 'leaderboard'
-  | 'die'
-  | `sphere:${SphereType}`;
+type Page = 'hub' | 'inventory' | 'wallet' | 'expeditions' | 'workshop' | 'raid';
+type ModalKind = 'entry' | 'rules' | 'roadmap' | 'expeditions' | 'die' | `sphere:${SphereType}`;
 const TITLES: Record<Page, { title: string; subtitle: string; breadcrumb: string }> = {
   workshop: {
     title: 'Искусство шести граней',
@@ -58,6 +50,11 @@ const TITLES: Record<Page, { title: string; subtitle: string; breadcrumb: string
     breadcrumb: 'ТРЕНИРОВОЧНЫЕ КАТАКОМБЫ',
   },
   hub: { title: 'У костра', subtitle: 'Вдохните. Вы дома, искатель.', breadcrumb: 'ОБЗОР ОБИТЕЛИ' },
+  raid: {
+    title: 'Одна команда. Одна легенда.',
+    subtitle: 'Печать держит босса. Сломайте её вместе.',
+    breadcrumb: 'РЕЙД ОБИТЕЛИ',
+  },
   inventory: {
     title: 'Сумка искателя',
     subtitle: 'Не количество вещей, а сила одного кубика.',
@@ -74,8 +71,6 @@ const MODAL_TITLES: Record<Exclude<ModalKind, `sphere:${SphereType}`>, string> =
   rules: 'Не удача. Тактика.',
   roadmap: 'История только начинается',
   expeditions: 'За порогом Обители',
-  raid: 'Одна команда. Одна легенда.',
-  leaderboard: 'Зал славы Обители',
   die: 'Ближе к сути',
 };
 
@@ -169,15 +164,7 @@ export function App() {
       key: 'raid',
       label: 'Рейд Обители',
       icon: Hexagon,
-      action: () => setModal('raid'),
-      soon: true,
-    },
-    {
-      key: 'leaderboard',
-      label: 'Зал славы',
-      icon: Crown,
-      action: () => setModal('leaderboard'),
-      soon: true,
+      action: () => navigate('raid'),
     },
   ];
   const sphere = modal?.startsWith('sphere:') ? (modal.slice(7) as SphereType) : null;
@@ -218,7 +205,7 @@ export function App() {
         </button>
         <span className="nav-label">ПУТЬ ИСКАТЕЛЯ</span>
         <nav aria-label="Главная навигация">
-          {navItems.map(({ key, label, icon: Icon, action, soon }) => (
+          {navItems.map(({ key, label, icon: Icon, action }) => (
             <button
               key={key}
               className={`nav-button ${page === key ? 'active' : ''}`}
@@ -227,11 +214,7 @@ export function App() {
             >
               <Icon size={19} strokeWidth={1.5} />
               <span>{label}</span>
-              {soon ? (
-                <span className="soon-dot" title="В следующем этапе" />
-              ) : page === key ? (
-                <span className="active-nav-mark" />
-              ) : null}
+              {page === key ? <span className="active-nav-mark" /> : null}
             </button>
           ))}
         </nav>
@@ -342,13 +325,14 @@ export function App() {
               onInventory={() => navigate('inventory')}
               onWallet={() => navigate('wallet')}
               onRules={() => setModal('rules')}
-              onRaid={() => setModal('raid')}
+              onRaid={() => navigate('raid')}
               onExpeditions={() => navigate('expeditions')}
               onDie={inspect}
               onSphere={(type) => setModal(`sphere:${type}`)}
             />
           )}
           {page === 'expeditions' && <Expeditions onEntry={() => setModal('entry')} />}
+          {page === 'raid' && <Raid onBack={() => navigate('hub')} />}
           {page === 'inventory' && <Inventory onWorkshop={openWorkshop} />}
           {page === 'workshop' && (
             <Workshop
@@ -373,7 +357,7 @@ export function App() {
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Мобильная навигация">
-        {navItems.slice(0, 5).map(({ key, label, icon: Icon, action }) => (
+        {navItems.map(({ key, label, icon: Icon, action }) => (
           <button
             key={key}
             onClick={action}
@@ -571,30 +555,19 @@ export function App() {
           ) : (
             <div className="prose">
               <span className="stage-label">СЛЕДУЮЩИЙ ЭТАП · В РАЗРАБОТКЕ</span>
-              <div className="planned-emblem">{modal === 'raid' ? <Hexagon /> : <Crown />}</div>
+              <div className="planned-emblem">
+                <Crown />
+              </div>
               <p>
-                {modal === 'raid'
-                  ? 'Соберите 15 фрагментов печати всей Обителью и пробудите общего босса. Рейд продлится 48 часов — быть онлайн одновременно не нужно.'
-                  : 'Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые помогли выиграть бой за последние семь дней.'}
+                Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые
+                помогли выиграть бой за последние семь дней.
               </p>
               <div className="notice">
-                {modal === 'raid' ? (
-                  <>
-                    <Users size={21} />
-                    <span>
-                      Личные фрагменты: {hub.player.sealFragments}. В алтаре:{' '}
-                      {hub.room.sealFragments} из 15. Вклады и атаки ещё не доступны.
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={21} />
-                    <span>
-                      Уже доступны хаб, инвентарь, Мастерская и тренировочные бои. Этот раздел пока
-                      не меняет игровой прогресс.
-                    </span>
-                  </>
-                )}
+                <Sparkles size={21} />
+                <span>
+                  Уже доступны хаб, инвентарь, Мастерская, экспедиции и рейды Обители. Этот раздел
+                  пока не меняет игровой прогресс.
+                </span>
               </div>
               <button className="button secondary full" onClick={() => setModal('roadmap')}>
                 План приключения <ArrowUpRight size={15} />

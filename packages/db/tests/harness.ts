@@ -7,6 +7,7 @@ import {
   PrismaGameRepository,
   PrismaInventoryRepository,
   PrismaProfileRepository,
+  PrismaRaidRepository,
   PrismaRoomRepository,
 } from '../src/index.js';
 export async function databaseHarness() {
@@ -48,6 +49,7 @@ export async function databaseHarness() {
     rooms: new PrismaRoomRepository(db),
     game: new PrismaGameRepository(db),
     inventory: new PrismaInventoryRepository(db),
+    raid: new PrismaRaidRepository(db),
     reset: async () => {
       await admin.query('TRUNCATE TABLE "Room", "User" CASCADE');
     },

@@ -103,6 +103,96 @@ export interface HubDTO {
   } | null;
 }
 
+/** Асинхронный рейд Обители: altar-прогресс, активный босс и зачёт семи дней. */
+export interface RaidRoundDTO {
+  round: number;
+  shield: number;
+  cleared: boolean;
+}
+export interface RaidContributionDTO {
+  memberId: string;
+  firstName: string;
+  damage: number;
+  attacks: number;
+}
+export interface RaidDTO {
+  altar: { fragments: number; target: number; ready: boolean };
+  myFragments: number;
+  hornsLeft: number;
+  raid: {
+    id: string;
+    bossName: string;
+    status: 'ACTIVE' | 'DEFEATED' | 'EXPIRED';
+    phase: number;
+    rounds: RaidRoundDTO[];
+    currentHp: number;
+    roundHp: number;
+    shield: number;
+    maxHp: number;
+    revision: number;
+    createdAt: string;
+    expiresAt: string;
+    defeatedAt: string | null;
+    myDamage: number;
+    totalDamage: number;
+    contributions: RaidContributionDTO[];
+    attack: RaidAttackDTO | null;
+  } | null;
+  canContribute: ItemPermission;
+  canSummon: ItemPermission;
+  canAttack: ItemPermission;
+}
+export interface RaidAttackDTO {
+  id: string;
+  round: number;
+  rollsUsed: number;
+  rerollsLeft: number;
+  focusCharges: number;
+  state: 'AWAITING_ROLL' | 'AWAITING_DECISION' | 'FINISHED';
+  currentRolledFace: number | null;
+  options: {
+    direct: FacePlayDTO | null;
+    shift: FacePlayDTO | null;
+    flip: FacePlayDTO | null;
+  } | null;
+  action: FaceAction | null;
+  faceValue: number | null;
+  damageDealt: number;
+}
+export interface FacePlayDTO {
+  face: number;
+  action: FaceAction;
+  value: number;
+}
+export interface LeaderboardEntryDTO {
+  dieId: string;
+  die: DieDTO;
+  ownerName: string;
+  lastVictoryAt: string;
+  lastVictoryPowerScore: number;
+  qualified: boolean;
+}
+export interface LeaderboardDTO {
+  windowDays: number;
+  windowStart: string;
+  entries: LeaderboardEntryDTO[];
+}
+export interface RaidMutation {
+  expectedRevision: number;
+  confirmed: true;
+}
+export interface RaidContributeRequest extends RaidMutation {
+  fragments: number;
+}
+export interface RaidAttackMutation {
+  raidId: string;
+  attackId: string;
+  expectedRevision: number;
+}
+export interface RaidDecisionRequest extends RaidAttackMutation {
+  action: 'DIRECT' | 'SHIFT' | 'FLIP' | 'REROLL';
+}
+
 export interface SessionDTO {
   hub: HubDTO;
   authExpiresAt: string;

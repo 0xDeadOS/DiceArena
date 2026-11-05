@@ -379,6 +379,8 @@ export class PrismaGameRepository implements GameRepository {
           run.mode === 'EXPEDITION' && victory
             ? Math.max(member.highestExpeditionLevel, run.level)
             : undefined,
+        // Фрагмент печати — награда за победу в обычной экспедиции; тренировка его не даёт.
+        sealFragments: run.mode === 'EXPEDITION' && victory ? { increment: 1 } : undefined,
       },
     });
     return tx.mapRun.update({

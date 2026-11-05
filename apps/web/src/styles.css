@@ -2285,7 +2285,9 @@ button svg {
     justify-content: center;
     flex-direction: column;
     gap: 5px;
-    min-width: 50px;
+    /* Шесть разделов: 320 px − отступы = 300 px, по 48 px на пункт без прокрутки. */
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 43px;
     background: none;
     color: #7e8f71;
@@ -4861,4 +4863,220 @@ button svg {
   .facet-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* ── Рейд Обители ───────────────────────────────────────────── */
+.raid-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.raid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.raid-tabs {
+  display: flex;
+  gap: 6px;
+}
+.raid-tabs .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 190, 148, 0.22);
+  background: rgba(18, 16, 20, 0.6);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.raid-tabs .tab:hover {
+  color: var(--gold);
+  border-color: rgba(214, 190, 148, 0.4);
+}
+.raid-tabs .tab.active {
+  color: var(--ink);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.raid-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.raid-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(207, 122, 96, 0.45);
+  background: rgba(207, 122, 96, 0.12);
+  color: #f0c9b6;
+  font-size: 13px;
+}
+.raid-loading,
+.raid-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+.altar-meter {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.altar-meter .shard {
+  width: 14px;
+  height: 20px;
+  border-radius: 3px;
+  background: rgba(214, 190, 148, 0.12);
+  border: 1px solid rgba(214, 190, 148, 0.2);
+  transition: all 160ms ease;
+}
+.altar-meter .shard.lit {
+  background: linear-gradient(160deg, var(--gold), #a97f3c);
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(214, 178, 106, 0.5);
+}
+.round-ladder {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.round-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid rgba(214, 190, 148, 0.18);
+  background: rgba(18, 16, 20, 0.5);
+  color: var(--muted);
+}
+.round-node.current {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.round-node.cleared {
+  border-color: rgba(126, 176, 126, 0.5);
+  color: #a9cfa9;
+}
+.boss-hp .hp-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(214, 190, 148, 0.12);
+  margin-bottom: 6px;
+}
+.boss-hp .hp-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #c2543f, #e08a5f);
+  transition: width 240ms ease;
+}
+.boss-hp small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.boss-stats {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.boss-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.boss-stats strong {
+  color: var(--ink);
+}
+.strike-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(214, 190, 148, 0.2);
+  background: rgba(214, 190, 148, 0.05);
+}
+.strike-panel h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+.contribution-list,
+.hall-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.contribution-list li,
+.hall-list li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(18, 16, 20, 0.45);
+  border: 1px solid rgba(214, 190, 148, 0.12);
+  font-size: 13px;
+}
+.contribution-list .rank,
+.hall-list .rank {
+  color: var(--gold);
+  font-weight: 600;
+}
+.contribution-list .damage,
+.hall-list .ps {
+  color: var(--ink);
+  font-weight: 600;
+}
+.contribution-list .attacks,
+.hall-list .owner {
+  color: var(--muted);
+  font-size: 12px;
+}
+.hall-list li.dim {
+  opacity: 0.6;
+}
+.empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--muted);
+}
+.panel-hint.muted {
+  opacity: 0.75;
 }

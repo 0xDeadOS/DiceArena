@@ -4,7 +4,13 @@ import rateLimit from '@fastify/rate-limit';
 import { GameRuleError } from '@dicebound/game-core';
 import { gameRoutes } from './routes/game.js';
 import { inventoryRoutes } from './routes/inventory.js';
-import type { GameRepository, InventoryRepository, ProfileRepository } from '@dicebound/db';
+import { raidRoutes } from './routes/raid.js';
+import type {
+  GameRepository,
+  InventoryRepository,
+  ProfileRepository,
+  RaidRepository,
+} from '@dicebound/db';
 import type { ApiErrorDTO, HubDTO, SessionDTO } from '@dicebound/shared-types';
 import { verifyAuthorization } from './auth/init-data.js';
 import type { VerifiedLaunch } from './auth/init-data.js';
@@ -22,6 +28,7 @@ export interface AppDependencies {
   profiles: ProfileRepository;
   game?: GameRepository;
   inventory?: InventoryRepository;
+  raid?: RaidRepository;
   membership: MembershipChecker;
   botToken: string;
   maxInitDataAgeSeconds?: number;
@@ -166,6 +173,14 @@ export async function buildApp(deps: AppDependencies) {
   if (deps.inventory)
     inventoryRoutes(app, {
       inventory: deps.inventory,
+      profiles: deps.profiles,
+      membership: deps.membership,
+      clock,
+      hooks: [signedLaunch, userLimit],
+    });
+  if (deps.raid)
+    raidRoutes(app, {
+      raid: deps.raid,
       profiles: deps.profiles,
       membership: deps.membership,
       clock,

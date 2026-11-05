@@ -6,3 +6,4 @@ export * from './combat.js';
 export * from './maps.js';
 export * from './workshop.js';
 export * from './expeditions.js';
+export * from './raid.js';

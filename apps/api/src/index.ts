@@ -6,6 +6,7 @@ import {
   PrismaProfileRepository,
   PrismaGameRepository,
   PrismaInventoryRepository,
+  PrismaRaidRepository,
 } from '@dicebound/db';
 import { buildApp } from './app.js';
 import { readConfig } from './config.js';
@@ -25,6 +26,7 @@ async function main() {
     profiles: new PrismaProfileRepository(db),
     game: new PrismaGameRepository(db),
     inventory: new PrismaInventoryRepository(db),
+    raid: new PrismaRaidRepository(db),
     membership,
     maxInitDataAgeSeconds: config.INIT_DATA_MAX_AGE_SECONDS,
     logLevel: config.LOG_LEVEL,

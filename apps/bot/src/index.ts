@@ -3,6 +3,7 @@ import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 import { createDatabase, PrismaRoomRepository } from '@dicebound/db';
 import { buildBot } from './bot.js';
+import { startAnnouncementDispatcher } from './announce.js';
 
 loadEnv({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
 
@@ -24,8 +25,14 @@ async function main() {
   const config = parsed.data;
   const db = createDatabase(config.DATABASE_URL);
   const bot = buildBot(config.BOT_TOKEN, config.APP_SHORT_NAME, new PrismaRoomRepository(db));
+  const stopAnnouncements = startAnnouncementDispatcher({
+    db,
+    send: (chatId, text) => bot.api.sendMessage(chatId.toString(), text),
+    log: (message) => console.warn(message),
+  });
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
+      stopAnnouncements();
       if (bot.isRunning()) void bot.stop();
     });
   }
@@ -45,6 +52,7 @@ async function main() {
       onStart: () => console.info('Dicebound bot is running.'),
     });
   } finally {
+    stopAnnouncements();
     await db.$disconnect();
   }
 }
