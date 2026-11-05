@@ -160,4 +160,35 @@ describe('inventory commands in the Mini App', () => {
     await useInventory.getState().submit('/api/inventory/lock', {});
     expect(request).toHaveBeenCalledTimes(3);
   });
+  it('sends tutorial and trophy commands with frozen consent and one nonce each', async () => {
+    await load();
+    request.mockResolvedValueOnce({
+      inventory: fixtureInventory(),
+      result: { type: 'TUTORIAL_REWARD', sphere: 'CASTING', amount: 1 },
+    });
+    await useInventory.getState().submit('/api/tutorial/reward', {
+      expectedRevision: 0,
+      confirmed: true,
+    });
+    expect(useInventory.getState().result).toMatchObject({ type: 'TUTORIAL_REWARD', amount: 1 });
+    request.mockResolvedValueOnce({
+      inventory: fixtureInventory(),
+      result: { type: 'SALVAGE_DROP', dieId: 'drop-1', dust: 1 },
+    });
+    await useInventory.getState().submit('/api/inventory/claim', {
+      dropId: 'drop-1',
+      expectedRevision: 0,
+      action: 'DUST',
+      confirmed: true,
+    });
+    const calls = request.mock.calls.slice(1);
+    expect(calls.map((call) => call[0])).toEqual(['/api/tutorial/reward', '/api/inventory/claim']);
+    expect(new Set(calls.map((call) => call[1]!.key)).size).toBe(2);
+    expect(calls[1]![1]!.body).toEqual({
+      dropId: 'drop-1',
+      expectedRevision: 0,
+      action: 'DUST',
+      confirmed: true,
+    });
+  });
 });

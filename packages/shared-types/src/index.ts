@@ -78,9 +78,12 @@ export interface HubDTO {
     equippedDieId: string | null;
     vigor: { current: number; maximum: number; nextRestoreAt: string };
     tutorialDone: boolean;
+    tutorial: TutorialProgress;
+    highestExpeditionLevel: number;
   };
   inventory: {
     capacity: number;
+    pendingDrops: PendingDropDTO[];
     dice: DieDTO[];
     spheres: { type: SphereType; amount: number }[];
   };
@@ -158,6 +161,8 @@ export interface CombatState {
   playerMaxHp: number;
   playerShield: number;
   enemyType: EnemyType;
+  /** Frozen per run; absent only in pre-expedition cached responses. */
+  enemyScale?: number;
   enemyHp: number;
   enemyMaxHp: number;
   enemyShield: number;
@@ -191,7 +196,9 @@ export interface TrainingLoot {
 export interface RunDTO {
   id: string;
   revision: number;
-  mode: 'TRAINING';
+  mode: 'TRAINING' | 'EXPEDITION';
+  /** Legacy training replay responses may omit level. */
+  level?: number;
   status: 'IN_PROGRESS' | 'VICTORY' | 'DEFEAT';
   currentNodeId: string;
   visitedNodeIds: string[];
@@ -200,8 +207,8 @@ export interface RunDTO {
   playerHp: number;
   playerMaxHp: number;
   loadout: CombatDie;
-  loot: TrainingLoot;
-  reward: TrainingLoot | null;
+  loot: RunLootDTO;
+  reward: RunLootDTO | null;
   battle: BattleDTO | null;
 }
 export interface RunResponse {
@@ -258,6 +265,10 @@ export interface CraftRequest extends ItemMutation {
   confirmed: true;
 }
 export type InventoryResult =
+  | { type: 'TUTORIAL_REWARD'; sphere: 'CASTING'; amount: 1 }
+  | { type: 'TUTORIAL_COMPLETE' }
+  | { type: 'CLAIM_DROP'; dieId: string }
+  | { type: 'SALVAGE_DROP'; dieId: string; dust: number }
   | { type: 'EQUIP'; dieId: string }
   | { type: 'LOCK'; dieId: string }
   | { type: 'DISMANTLE'; dieId: string; dust: number }
@@ -265,4 +276,40 @@ export type InventoryResult =
 export interface InventoryResponse {
   inventory: InventoryDTO;
   result: InventoryResult;
+}
+
+export interface TutorialProgress {
+  trainingWon: boolean;
+  crafted: boolean;
+  rewardClaimed: boolean;
+  step: 'TRAINING' | 'REWARD' | 'CRAFT' | 'COMPLETE' | 'DONE';
+}
+export interface SphereStack {
+  type: SphereType;
+  amount: number;
+}
+/** Collected loot is not owned inventory until settlement and a successful claim. */
+export interface RunLootDTO extends TrainingLoot {
+  spheres?: SphereStack[];
+  dice?: DieDTO[];
+}
+export interface PendingDropDTO {
+  id: string;
+  runId: string;
+  item: DieDTO;
+  dust: number;
+  take: ItemPermission;
+}
+export interface ExpeditionStartRequest {
+  level: number;
+  expectedInventoryRevision: number;
+  confirmed: true;
+}
+export interface TutorialRequest {
+  expectedRevision: number;
+  confirmed: true;
+}
+export interface ClaimDropRequest extends TutorialRequest {
+  dropId: string;
+  action: 'TAKE' | 'DUST';
 }

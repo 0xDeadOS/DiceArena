@@ -37,7 +37,28 @@ export function inventoryRoutes(
       return deps.inventory.current(room, identity, deps.clock());
     },
   );
+  const revision = item.expectedRevision;
   const routes = [
+    {
+      path: '/api/tutorial/reward',
+      type: 'TUTORIAL_REWARD',
+      properties: { expectedRevision: revision, confirmed },
+    },
+    {
+      path: '/api/tutorial/complete',
+      type: 'TUTORIAL_COMPLETE',
+      properties: { expectedRevision: revision, confirmed },
+    },
+    {
+      path: '/api/inventory/claim',
+      type: 'CLAIM_DROP',
+      properties: {
+        dropId: item.dieId,
+        expectedRevision: revision,
+        confirmed,
+        action: { type: 'string', enum: ['TAKE', 'DUST'] },
+      },
+    },
     { path: '/api/inventory/equip', type: 'EQUIP', properties: { ...item } },
     {
       path: '/api/inventory/lock',

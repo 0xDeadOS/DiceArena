@@ -1,6 +1,8 @@
 import { SPHERE_TYPES } from '@dicebound/shared-types';
 import type {
   CraftRequest,
+  TutorialRequest,
+  ClaimDropRequest,
   DismantleRequest,
   EquipRequest,
   InventoryDTO,
@@ -12,6 +14,7 @@ import type {
 } from '@dicebound/shared-types';
 import {
   craftDie,
+  INVENTORY_CAPACITY,
   craftRejection,
   dismantleDust,
   dismantlePermission,
@@ -26,6 +29,9 @@ import type { Tx } from './transactions.js';
 import { readLockedHub, toDieDTO } from './profiles.js';
 import { newSecretSeed, secretInt } from './random.js';
 export type InventoryCommand =
+  | ({ type: 'TUTORIAL_REWARD' } & TutorialRequest)
+  | ({ type: 'TUTORIAL_COMPLETE' } & TutorialRequest)
+  | ({ type: 'CLAIM_DROP' } & ClaimDropRequest)
   | ({ type: 'EQUIP' } & EquipRequest)
   | ({ type: 'LOCK' } & LockRequest)
   | ({ type: 'DISMANTLE' } & DismantleRequest)
@@ -69,6 +75,18 @@ export class PrismaInventoryRepository implements InventoryRepository {
           'STALE_INVENTORY',
           'Инвентарь изменился. Обновите данные и подтвердите действие заново.',
         );
+        if (
+          command.type === 'TUTORIAL_REWARD' ||
+          command.type === 'TUTORIAL_COMPLETE' ||
+          command.type === 'CLAIM_DROP'
+        ) {
+          const result = await this.progressCommand(tx, member, command);
+          const updated = await tx.roomMember.update({
+            where: { id: member.id },
+            data: { inventoryRevision: { increment: 1 } },
+          });
+          return { inventory: await this.snapshot(tx, updated, now), result };
+        }
         const found = await tx.die.findFirst({ where: { id: command.dieId, ownerId: member.id } });
         requireRule(found, 'DIE_NOT_FOUND', 'Кубик не найден в этой Обители.');
         await tx.$queryRaw`SELECT id FROM "Die" WHERE id=${found.id}::uuid FOR UPDATE`;
@@ -175,12 +193,97 @@ export class PrismaInventoryRepository implements InventoryRepository {
         }
         const updated = await tx.roomMember.update({
           where: { id: member.id },
-          data: { inventoryRevision: { increment: 1 } },
+          data: {
+            inventoryRevision: { increment: 1 },
+            tutorialCrafted: command.type === 'CRAFT' ? true : undefined,
+          },
         });
         return { inventory: await this.snapshot(tx, updated, now), result };
       },
     );
   }
+  private async progressCommand(
+    tx: Tx,
+    member: RoomMember,
+    command: Extract<
+      InventoryCommand,
+      { type: 'CLAIM_DROP' | 'TUTORIAL_REWARD' | 'TUTORIAL_COMPLETE' }
+    >,
+  ): Promise<InventoryResult> {
+    requireRule(command.confirmed === true, 'CONFIRMATION_REQUIRED', 'Подтвердите действие.');
+    if (command.type === 'TUTORIAL_REWARD') {
+      requireRule(
+        member.tutorialTrainingWon,
+        'TRAINING_REQUIRED',
+        'Сначала победите в тренировочных катакомбах.',
+      );
+      requireRule(
+        !member.tutorialRewardClaimed,
+        'REWARD_ALREADY_CLAIMED',
+        'Учебная сфера уже получена.',
+      );
+      await tx.userCurrency.upsert({
+        where: { ownerId_sphereType: { ownerId: member.id, sphereType: 'CASTING' } },
+        create: { ownerId: member.id, sphereType: 'CASTING', amount: 1 },
+        update: { amount: { increment: 1 } },
+      });
+      await tx.roomMember.update({
+        where: { id: member.id },
+        data: { tutorialRewardClaimed: true },
+      });
+      return { type: 'TUTORIAL_REWARD', sphere: 'CASTING', amount: 1 };
+    }
+    if (command.type === 'TUTORIAL_COMPLETE') {
+      requireRule(!member.tutorialDone, 'TUTORIAL_ALREADY_COMPLETE', 'Обучение уже завершено.');
+      requireRule(
+        member.tutorialTrainingWon && member.tutorialCrafted && member.tutorialRewardClaimed,
+        'TUTORIAL_INCOMPLETE',
+        'Победите в тренировке, заберите учебную сферу и выполните крафт.',
+      );
+      await tx.roomMember.update({ where: { id: member.id }, data: { tutorialDone: true } });
+      return { type: 'TUTORIAL_COMPLETE' };
+    }
+    const drop = await tx.pendingDrop.findFirst({
+      where: { id: command.dropId, ownerId: member.id },
+    });
+    requireRule(drop, 'DROP_NOT_FOUND', 'Трофей не найден или уже разобран.');
+    const item = parseCombatDie(drop.dieData);
+    requireRule(item.id === drop.id, 'INVALID_DROP', 'Трофей повреждён.');
+    let result: InventoryResult;
+    if (command.action === 'TAKE') {
+      requireRule(
+        (await tx.die.count({ where: { ownerId: member.id } })) < INVENTORY_CAPACITY,
+        'INVENTORY_FULL',
+        'В сумке нет свободного слота. Трофей сохранён.',
+      );
+      await tx.die.create({
+        data: {
+          id: item.id,
+          ownerId: member.id,
+          baseType: item.baseType,
+          ilvl: item.ilvl,
+          quality: item.quality,
+          rarity: item.rarity,
+          faces: json(item.faces),
+          affixes: json(item.affixes),
+          powerScore: item.powerScore,
+          contentVersion: item.contentVersion ?? 0,
+        },
+      });
+      result = { type: 'CLAIM_DROP', dieId: item.id };
+    } else {
+      requireRule(command.action === 'DUST', 'INVALID_CLAIM', 'Неизвестное действие с трофеем.');
+      const dust = dismantleDust(item.rarity);
+      await tx.roomMember.update({
+        where: { id: member.id },
+        data: { facetDust: { increment: dust } },
+      });
+      result = { type: 'SALVAGE_DROP', dieId: item.id, dust };
+    }
+    await tx.pendingDrop.delete({ where: { id: drop.id } });
+    return result;
+  }
+
   private async activeDie(tx: Tx, memberId: string): Promise<string | null> {
     const active = await tx.mapRun.findFirst({
       where: { ownerId: memberId, status: 'IN_PROGRESS' },

@@ -1,5 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import {
   addLoot,
+  addExpeditionLoot,
+  emptyExpeditionLoot,
+  expeditionLootSchema,
+  expeditionMap,
+  expeditionReward,
+  expeditionScale,
+  EXPEDITION_COST,
+  settleExpeditionLoot,
+  refreshVigor,
   combatLogSchema,
   combatOptions,
   combatStats,
@@ -21,6 +31,9 @@ import {
 import { ENEMY_TYPES } from '@dicebound/shared-types';
 import type {
   BattleDecisionRequest,
+  ExpeditionStartRequest,
+  RunLootDTO,
+  MapNodeDTO,
   BattleRollRequest,
   CombatState,
   EnemyType,
@@ -33,12 +46,14 @@ import type {
 import type { Prisma } from './generated/prisma/client.js';
 import type { PrismaClient } from './generated/prisma/client.js';
 import type { Battle, MapRun, RoomMember } from './generated/prisma/client.js';
+import { toDropDTO } from './profiles.js';
 import { battleFace, newSecretSeed, secretInt } from './random.js';
 import { json, lockMember, memberCommand } from './transactions.js';
 import type { Tx } from './transactions.js';
 
 export type GameCommand =
   | { type: 'START' }
+  | ({ type: 'EXPEDITION' } & ExpeditionStartRequest)
   | ({ type: 'STEP' } & MapStepRequest)
   | ({ type: 'ROLL' } & BattleRollRequest)
   | ({ type: 'DECISION' } & BattleDecisionRequest)
@@ -89,7 +104,8 @@ export class PrismaGameRepository implements GameRepository {
       now,
       async (tx, member) => {
         let run: MapRun;
-        if (command.type === 'START') run = await this.start(tx, member);
+        if (command.type === 'START' || command.type === 'EXPEDITION')
+          run = await this.start(tx, member, command.type === 'EXPEDITION' ? command : null, now);
         else {
           const owned = await tx.mapRun.findFirst({
             where: { id: command.runId, ownerId: member.id },
@@ -137,7 +153,12 @@ export class PrismaGameRepository implements GameRepository {
     );
   }
 
-  private async start(tx: Tx, member: RoomMember): Promise<MapRun> {
+  private async start(
+    tx: Tx,
+    member: RoomMember,
+    expedition: ExpeditionStartRequest | null,
+    now: Date,
+  ): Promise<MapRun> {
     requireRule(
       !(await tx.mapRun.findFirst({
         where: { ownerId: member.id, status: 'IN_PROGRESS' },
@@ -146,6 +167,45 @@ export class PrismaGameRepository implements GameRepository {
       'ACTIVE_RUN_EXISTS',
       'Сначала завершите текущий поход.',
     );
+    if (expedition) {
+      requireRule(
+        expedition.confirmed === true,
+        'CONFIRMATION_REQUIRED',
+        'Подтвердите расход бодрости.',
+      );
+      requireRule(
+        expedition.expectedInventoryRevision === member.inventoryRevision,
+        'STALE_INVENTORY',
+        'Ресурсы изменились. Обновите данные и подтвердите поход заново.',
+      );
+      requireRule(member.tutorialDone, 'TUTORIAL_REQUIRED', 'Сначала завершите обучение у костра.');
+      requireRule(
+        Number.isInteger(expedition.level) &&
+          expedition.level >= 1 &&
+          expedition.level <= Math.min(50, member.highestExpeditionLevel + 1),
+        'LEVEL_LOCKED',
+        'Этот уровень экспедиции ещё не открыт.',
+      );
+      requireRule(
+        (await tx.pendingDrop.count({ where: { ownerId: member.id } })) === 0,
+        'UNCLAIMED_DROPS',
+        'Сначала разберите трофеи прошлого похода в инвентаре.',
+      );
+      const vigor = refreshVigor(member.storedVigor, member.vigorUpdatedAt, now);
+      requireRule(
+        vigor.current >= EXPEDITION_COST,
+        'NO_VIGOR',
+        'Недостаточно бодрости. Тренировка остаётся бесплатной.',
+      );
+      await tx.roomMember.update({
+        where: { id: member.id },
+        data: {
+          storedVigor: vigor.current - EXPEDITION_COST,
+          vigorUpdatedAt: vigor.updatedAt,
+          inventoryRevision: { increment: 1 },
+        },
+      });
+    }
     const item = member.equippedDieId
       ? await tx.die.findFirst({ where: { id: member.equippedDieId, ownerId: member.id } })
       : null;
@@ -153,19 +213,24 @@ export class PrismaGameRepository implements GameRepository {
     const die = parseCombatDie(item);
     const seed = newSecretSeed();
     let step = 0;
-    const nodes = trainingMap((max) => secretInt(seed, 'map', step++, max));
+    const nodes = (expedition ? expeditionMap : trainingMap)((max) =>
+      secretInt(seed, 'map', step++, max),
+    );
     const hp = combatStats(die).maxHp;
     return tx.mapRun.create({
       data: {
         ownerId: member.id,
         seed,
-        hasVigorBoost: false,
+        hasVigorBoost: !!expedition,
+        mode: expedition ? 'EXPEDITION' : 'TRAINING',
+        level: expedition?.level ?? 0,
+        enemyScale: expedition ? expeditionScale(expedition.level) : 600,
         dagMapData: json(nodes),
         visitedNodeIds: ['start'],
         dieSnapshot: json(die),
         playerHp: hp,
         playerMaxHp: hp,
-        accumulatedLoot: { gold: 0, dust: 0 },
+        accumulatedLoot: expedition ? json(emptyExpeditionLoot()) : { gold: 0, dust: 0 },
       },
     });
   }
@@ -190,8 +255,8 @@ export class PrismaGameRepository implements GameRepository {
     const visited = readVisited(run.visitedNodeIds);
     requireRule(!visited.includes(next.id), 'NODE_ALREADY_VISITED', 'Этот узел уже пройден.');
     let hp = run.playerHp;
-    let loot = lootSchema.parse(run.accumulatedLoot);
-    if (next.type === 'CHEST') loot = addLoot(loot, trainingReward('CHEST'));
+    let loot = this.readLoot(run, run.accumulatedLoot);
+    if (next.type === 'CHEST') loot = this.collectLoot(run, next);
     if (next.type === 'CAMP')
       hp = Math.min(run.playerMaxHp, hp + Math.ceil(run.playerMaxHp * 0.35));
     if (['BATTLE', 'ELITE', 'BOSS'].includes(next.type)) {
@@ -204,7 +269,7 @@ export class PrismaGameRepository implements GameRepository {
             : ['SLIME', 'SPEARMAN', 'PLAGUE_RAT'];
       const type =
         next.depth === 1 ? 'SLIME' : pool[secretInt(run.seed, `enemy:${next.id}`, 0, pool.length)]!;
-      const state = newCombat(type, die, hp, run.playerMaxHp);
+      const state = newCombat(type, die, hp, run.playerMaxHp, run.enemyScale);
       await tx.battle.create({
         data: { runId: run.id, nodeId: next.id, battleSeed: newSecretSeed(), ...battleData(state) },
       });
@@ -246,10 +311,10 @@ export class PrismaGameRepository implements GameRepository {
       where: { id: battle.id },
       data: { ...battleData(result), stepIndex: random ? { increment: 1 } : undefined },
     });
-    let loot = lootSchema.parse(run.accumulatedLoot);
+    let loot = this.readLoot(run, run.accumulatedLoot);
     const node = mapSchema.parse(run.dagMapData).find((n) => n.id === run.currentNodeId)!;
     if (result.outcome === 'VICTORY') {
-      loot = addLoot(loot, trainingReward(node.type));
+      loot = this.collectLoot(run, node);
       await tx.die.updateMany({
         where: { id: die.id, ownerId: member.id, contentVersion: die.contentVersion ?? 0 },
         data: { lastVictoryAt: now, lastVictoryPowerScore: die.powerScore },
@@ -276,19 +341,73 @@ export class PrismaGameRepository implements GameRepository {
       'ALREADY_SETTLED',
       'Награда уже выдана.',
     );
-    const reward = settleLoot(lootSchema.parse(run.accumulatedLoot), outcome === 'VICTORY');
+    const victory = outcome === 'VICTORY';
+    let draw = 0;
+    const reward =
+      run.mode === 'EXPEDITION'
+        ? settleExpeditionLoot(expeditionLootSchema.parse(run.accumulatedLoot), victory, (max) =>
+            secretInt(run.seed, 'settlement', draw++, max),
+          )
+        : settleLoot(lootSchema.parse(run.accumulatedLoot), victory);
+    if (run.mode === 'EXPEDITION') {
+      const full = expeditionLootSchema.parse(reward);
+      for (const currency of full.spheres)
+        await tx.userCurrency.upsert({
+          where: { ownerId_sphereType: { ownerId: member.id, sphereType: currency.type } },
+          create: { ownerId: member.id, sphereType: currency.type, amount: currency.amount },
+          update: { amount: { increment: currency.amount } },
+        });
+      for (const die of full.dice)
+        await tx.pendingDrop.create({
+          data: {
+            id: die.id,
+            ownerId: member.id,
+            runId: run.id,
+            dieData: json(die),
+            createdAt: now,
+          },
+        });
+    }
     await tx.roomMember.update({
       where: { id: member.id },
       data: {
         gold: { increment: reward.gold },
         facetDust: { increment: reward.dust },
         inventoryRevision: { increment: 1 },
+        tutorialTrainingWon: run.mode === 'TRAINING' && victory ? true : undefined,
+        highestExpeditionLevel:
+          run.mode === 'EXPEDITION' && victory
+            ? Math.max(member.highestExpeditionLevel, run.level)
+            : undefined,
       },
     });
     return tx.mapRun.update({
       where: { id: run.id },
       data: { status: outcome, completedAt: now, settledLoot: json(reward), lootSettledAt: now },
     });
+  }
+
+  private readLoot(run: MapRun, data: unknown) {
+    return run.mode === 'EXPEDITION' ? expeditionLootSchema.parse(data) : lootSchema.parse(data);
+  }
+  private publicLoot(run: MapRun, data: unknown): RunLootDTO {
+    if (run.mode === 'TRAINING') return lootSchema.parse(data);
+    const loot = expeditionLootSchema.parse(data);
+    return { ...loot, dice: loot.dice.map(toDropDTO) };
+  }
+  private collectLoot(run: MapRun, node: MapNodeDTO) {
+    if (run.mode === 'TRAINING')
+      return addLoot(lootSchema.parse(run.accumulatedLoot), trainingReward(node.type));
+    let step = 0;
+    return addExpeditionLoot(
+      expeditionLootSchema.parse(run.accumulatedLoot),
+      expeditionReward(
+        node.type,
+        run.level,
+        (max) => secretInt(run.seed, `loot:${node.id}`, step++, max),
+        randomUUID,
+      ),
+    );
   }
 
   private async snapshot(tx: Tx, run: MapRun): Promise<RunDTO> {
@@ -307,7 +426,8 @@ export class PrismaGameRepository implements GameRepository {
     return {
       id: run.id,
       revision: run.revision,
-      mode: 'TRAINING',
+      mode: run.mode,
+      level: run.level,
       status: run.status,
       currentNodeId: run.currentNodeId,
       visitedNodeIds: readVisited(run.visitedNodeIds),
@@ -316,8 +436,8 @@ export class PrismaGameRepository implements GameRepository {
       playerHp: run.playerHp,
       playerMaxHp: run.playerMaxHp,
       loadout: die,
-      loot: lootSchema.parse(run.accumulatedLoot),
-      reward: run.settledLoot ? lootSchema.parse(run.settledLoot) : null,
+      loot: this.publicLoot(run, run.accumulatedLoot),
+      reward: run.settledLoot ? this.publicLoot(run, run.settledLoot) : null,
       battle:
         battle && state
           ? {
@@ -347,6 +467,7 @@ function readCombat(battle: Battle, run: MapRun): CombatState {
     playerMaxHp: run.playerMaxHp,
     playerShield: battle.playerShield,
     enemyType: battle.enemyType as EnemyType,
+    enemyScale: run.enemyScale,
     enemyHp: battle.enemyHp,
     enemyMaxHp: battle.enemyMaxHp,
     enemyShield: battle.enemyShield,

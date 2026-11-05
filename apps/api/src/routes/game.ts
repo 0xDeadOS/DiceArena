@@ -37,6 +37,15 @@ export function gameRoutes(
   const definitions = [
     { path: '/api/map/start', type: 'START', properties: {} },
     {
+      path: '/api/expedition/start',
+      type: 'EXPEDITION',
+      properties: {
+        level: { type: 'integer', minimum: 1, maximum: 50 },
+        expectedInventoryRevision: revision,
+        confirmed: { type: 'boolean', const: true },
+      },
+    },
+    {
       path: '/api/map/step',
       type: 'STEP',
       properties: {

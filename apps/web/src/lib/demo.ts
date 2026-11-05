@@ -1,6 +1,34 @@
-import type { HubDTO } from '@dicebound/shared-types';
+import { calculatePowerScore } from '@dicebound/game-core';
+import type { DieDTO, HubDTO } from '@dicebound/shared-types';
 
 /** UI-only fixture. It never enters the API, database, or Telegram auth path. */
+/** UI-only fixture. Server RNG never runs in the browser preview. */
+function demoDie(id: string): DieDTO {
+  const faces = [
+    { face: 1, action: 'STRIKE' as const, value: 7 },
+    { face: 2, action: 'GUARD' as const, value: 8 },
+    { face: 3, action: 'PIERCE' as const, value: 6 },
+    { face: 4, action: 'HEAL' as const, value: 3 },
+    { face: 5, action: 'STRIKE' as const, value: 9 },
+    { face: 6, action: 'GUARD' as const, value: 10 },
+  ];
+  return {
+    id,
+    contentVersion: 0,
+    effectiveFaces: faces,
+    baseType: 'IRON',
+    ilvl: 2,
+    quality: 0,
+    rarity: 'NORMAL',
+    powerScore: calculatePowerScore(faces, 0),
+    isStarter: false,
+    isLocked: false,
+    isEquipped: false,
+    masterCrafted: false,
+    affixes: [],
+    faces,
+  };
+}
 export function demoHub(): HubDTO {
   return {
     room: {
@@ -30,10 +58,21 @@ export function demoHub(): HubDTO {
           ),
         ).toISOString(),
       },
-      tutorialDone: false,
+      tutorialDone: true,
+      tutorial: { trainingWon: true, crafted: true, rewardClaimed: true, step: 'DONE' },
+      highestExpeditionLevel: 2,
     },
     inventory: {
       capacity: 12,
+      pendingDrops: [
+        {
+          id: 'demo-drop',
+          runId: 'demo-run',
+          dust: 1,
+          take: { allowed: true, reason: null },
+          item: demoDie('demo-drop'),
+        },
+      ],
       dice: [
         {
           id: 'demo-die',

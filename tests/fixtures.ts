@@ -48,9 +48,12 @@ export function fixtureHub(): HubDTO {
       equippedDieId: '0d41408b-c36e-4703-b43b-1ca7bb230f08',
       vigor: { current: 3, maximum: 6, nextRestoreAt: '2026-11-05T00:00:00.000Z' },
       tutorialDone: false,
+      tutorial: { trainingWon: false, crafted: false, rewardClaimed: false, step: 'TRAINING' },
+      highestExpeditionLevel: 0,
     },
     inventory: {
       capacity: 12,
+      pendingDrops: [],
       dice: [
         {
           id: '0d41408b-c36e-4703-b43b-1ca7bb230f08',

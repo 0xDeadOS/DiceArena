@@ -1,5 +1,8 @@
 import {
   calculatePowerScore,
+  parseCombatDie,
+  tutorialProgress,
+  dismantleDust,
   facePlay,
   INVENTORY_CAPACITY,
   MAX_VIGOR,
@@ -119,6 +122,7 @@ export async function readLockedHub(
       user: true,
       dice: { orderBy: { createdAt: 'asc' } },
       currencies: true,
+      pendingDrops: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
       room: {
         include: {
           _count: { select: { members: true } },
@@ -139,6 +143,8 @@ export async function readLockedHub(
           playerHp: true,
           playerMaxHp: true,
           hasVigorBoost: true,
+          mode: true,
+          level: true,
         },
       },
     },
@@ -170,6 +176,13 @@ export async function readLockedHub(
       sealFragments: member.sealFragments,
       equippedDieId: member.equippedDieId,
       tutorialDone: member.tutorialDone,
+      tutorial: tutorialProgress(
+        member.tutorialTrainingWon,
+        member.tutorialCrafted,
+        member.tutorialRewardClaimed,
+        member.tutorialDone,
+      ),
+      highestExpeditionLevel: member.highestExpeditionLevel,
       vigor: {
         current: vigor.current,
         maximum: MAX_VIGOR,
@@ -178,6 +191,22 @@ export async function readLockedHub(
     },
     inventory: {
       capacity: INVENTORY_CAPACITY,
+      pendingDrops: member.pendingDrops.map((drop) => {
+        const item = toDropDTO(drop.dieData);
+        return {
+          id: drop.id,
+          runId: drop.runId,
+          item,
+          dust: dismantleDust(item.rarity),
+          take: {
+            allowed: member.dice.length < INVENTORY_CAPACITY,
+            reason:
+              member.dice.length < INVENTORY_CAPACITY
+                ? null
+                : 'В сумке нет свободного слота. Освободите место или подтвердите распыление трофея.',
+          },
+        };
+      }),
       dice: member.dice.map((die) => toDieDTO(die, member.equippedDieId)),
       spheres: SPHERE_TYPES.map((type) => ({
         type,
@@ -252,5 +281,19 @@ export function toDieDTO(die: Die, equippedDieId: string | null): DieDTO {
   return {
     ...item,
     effectiveFaces: item.faces.map((f) => ({ ...f, value: facePlay(item, f.face).value })),
+  };
+}
+
+/** Pending drops are not equipped, protected starter gear, or victory-qualified inventory. */
+export function toDropDTO(value: unknown): DieDTO {
+  const item = parseCombatDie(value);
+  return {
+    ...item,
+    contentVersion: item.contentVersion ?? 0,
+    effectiveFaces: item.faces.map((face) => ({ ...face, value: facePlay(item, face.face).value })),
+    isStarter: false,
+    isLocked: false,
+    isEquipped: false,
+    masterCrafted: false,
   };
 }

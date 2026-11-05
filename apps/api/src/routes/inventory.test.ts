@@ -53,6 +53,13 @@ describe('inventory and crafting HTTP boundary', () => {
     expect(response.headers['cache-control']).toBe('no-store');
   });
   it.each([
+    ['/api/tutorial/reward', { expectedRevision: 0, confirmed: true }, 'TUTORIAL_REWARD'],
+    ['/api/tutorial/complete', { expectedRevision: 0, confirmed: true }, 'TUTORIAL_COMPLETE'],
+    [
+      '/api/inventory/claim',
+      { dropId: id, expectedRevision: 0, action: 'TAKE', confirmed: true },
+      'CLAIM_DROP',
+    ],
     ['/api/inventory/equip', { dieId: id, expectedRevision: 0 }, 'EQUIP'],
     ['/api/inventory/lock', { dieId: id, expectedRevision: 0, locked: true }, 'LOCK'],
     ['/api/inventory/dismantle', { dieId: id, expectedRevision: 0, confirmed: true }, 'DISMANTLE'],
@@ -179,5 +186,31 @@ describe('inventory and crafting HTTP boundary', () => {
     for (let i = 0; i < 3; i++)
       expect((await app.inject({ url: '/api/hub', headers: auth() })).statusCode).toBe(200);
     expect((await app.inject({ url: '/api/inventory', headers: auth() })).statusCode).toBe(429);
+  });
+  it.each([
+    ['/api/tutorial/reward', { expectedRevision: 0, confirmed: false }],
+    ['/api/tutorial/reward', { expectedRevision: 0, confirmed: true, amount: 100 }],
+    ['/api/tutorial/complete', { expectedRevision: 0, confirmed: true, tutorialDone: true }],
+    ['/api/inventory/claim', { dropId: id, expectedRevision: 0, action: 'TAKE' }],
+    [
+      '/api/inventory/claim',
+      { dropId: id, expectedRevision: 0, action: 'DISCARD', confirmed: true },
+    ],
+    [
+      '/api/inventory/claim',
+      {
+        dropId: id,
+        expectedRevision: 0,
+        action: 'TAKE',
+        confirmed: true,
+        die: { powerScore: 9999 },
+      },
+    ],
+  ])('rejects forged progression or claim bodies at %s', async (url, payload) => {
+    const { app, inventory } = await setup();
+    expect((await app.inject({ method: 'POST', url, headers: auth(), payload })).statusCode).toBe(
+      400,
+    );
+    expect(inventory.execute).not.toHaveBeenCalled();
   });
 });

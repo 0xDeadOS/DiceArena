@@ -4589,3 +4589,163 @@ button svg {
 .workpiece-details > .die-detail {
   margin-top: 14px;
 }
+
+/* Stage 4 — onboarding, ordinary expeditions and pending trophies. */
+.expedition-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.tutorial-card,
+.normal-expedition {
+  padding: 23px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tutorial-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+}
+.tutorial-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #ffffff05;
+}
+.tutorial-steps li.done {
+  border-color: #859b6433;
+  background: #859b6412;
+}
+.tutorial-steps li.active {
+  border-color: var(--gold-dim);
+}
+.tutorial-steps li > div {
+  flex: 1;
+  min-width: 0;
+}
+.tutorial-steps strong {
+  font-size: 11px;
+  display: block;
+  margin-bottom: 3px;
+}
+.tutorial-steps p {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.tutorial-mark {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+}
+.tutorial-mark > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff1c;
+}
+.tutorial-steps li.done .tutorial-mark {
+  border-color: #859b6459;
+  color: #b7cf94;
+}
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 9px;
+}
+.level-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 11px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #ffffff05;
+  color: var(--text);
+  cursor: pointer;
+}
+.level-chip:hover:not(:disabled) {
+  border-color: var(--gold-dim);
+}
+.level-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.level-chip strong {
+  font-family: var(--serif);
+  font-size: 17px;
+}
+.level-chip small {
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pending-drops {
+  margin-top: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.pending-drop {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  background: #d8b25c0d;
+}
+.pending-drop > div:nth-child(2) {
+  min-width: 0;
+}
+.pending-drop strong {
+  display: block;
+  font-size: 11px;
+}
+.pending-drop small {
+  font-size: 8px;
+  color: var(--muted);
+}
+.pending-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.pending-drop > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.tutorial-progress,
+.pending-strip {
+  margin-top: 11px;
+}
+@media (max-width: 720px) {
+  .pending-drop {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .pending-actions {
+    justify-content: flex-start;
+  }
+  .tutorial-steps li {
+    flex-wrap: wrap;
+  }
+}

@@ -8,11 +8,17 @@ export function CraftResult({ result, onClose }: { result: InventoryResult; onCl
       <div className="inventory-success" role="status">
         <Check size={18} />
         <span>
-          {result.type === 'EQUIP'
-            ? 'Кубик экипирован.'
-            : result.type === 'LOCK'
-              ? 'Защита кубика обновлена.'
-              : `Кубик распылён: +${result.dust} пыли.`}
+          {result.type === 'TUTORIAL_REWARD'
+            ? 'Учебная Отливка получена: +1 сфера.'
+            : result.type === 'TUTORIAL_COMPLETE'
+              ? 'Обучение завершено. Обычные экспедиции открыты.'
+              : result.type === 'CLAIM_DROP'
+                ? 'Трофей добавлен в сумку.'
+                : result.type === 'EQUIP'
+                  ? 'Кубик экипирован.'
+                  : result.type === 'LOCK'
+                    ? 'Защита кубика обновлена.'
+                    : `Кубик распылён: +${result.dust} пыли.`}
         </span>
         <button className="icon-button" aria-label="Скрыть результат" onClick={onClose}>
           <X size={15} />

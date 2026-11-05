@@ -54,6 +54,20 @@ describe('Mini App command retry state', () => {
       run: { revision: 9 },
     });
   });
+  it('refreshes the wallet after a paid ordinary start and keeps the frozen consent body', async () => {
+    await load();
+    const refresh = vi.fn(async () => {});
+    useSession.setState({ refresh });
+    request.mockResolvedValueOnce({ run: { ...fixtureRun(), mode: 'EXPEDITION', level: 3 } });
+    const body = { level: 3, expectedInventoryRevision: 0, confirmed: true };
+    await useGame.getState().submit('/api/expedition/start', body);
+    body.level = 9;
+    expect(request.mock.calls[1]![1]).toMatchObject({
+      body: { level: 3, expectedInventoryRevision: 0, confirmed: true },
+    });
+    expect(useGame.getState().run).toMatchObject({ mode: 'EXPEDITION', level: 3 });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
   it.each([429, 500, 503])('retains a pending command on retryable HTTP %s', async (status) => {
     await load();
     request.mockRejectedValueOnce(new ApiError(status, 'TEMPORARY', 'Позже.'));

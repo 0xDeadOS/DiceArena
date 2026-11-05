@@ -9,7 +9,7 @@ import type {
   PoisonEffect,
 } from '@dicebound/shared-types';
 import { combatStats, facePlay } from './catalog.js';
-import { ENEMIES, enemyIntent, trainingValue } from './enemies.js';
+import { ENEMIES, enemyIntent, scaledEnemyValue } from './enemies.js';
 import { oppositeFace } from './foundation.js';
 import { requireRule } from './rules.js';
 
@@ -35,10 +35,16 @@ export const combatLogSchema = z
   .array(z.object({ turn: count, message: z.string().max(300) }))
   .max(20);
 const emptyPoison = (): PoisonEffect => ({ damage: 0, turns: 0 });
-export function newCombat(type: EnemyType, die: CombatDie, hp: number, maxHp: number): CombatState {
+export function newCombat(
+  type: EnemyType,
+  die: CombatDie,
+  hp: number,
+  maxHp: number,
+  enemyScale = 600,
+): CombatState {
   if (!ENEMY_TYPES.includes(type) || hp < 1 || hp > maxHp) throw new Error('Invalid combat start');
   const stats = combatStats(die);
-  const enemyHp = trainingValue(ENEMIES[type].hp);
+  const enemyHp = scaledEnemyValue(ENEMIES[type].hp, enemyScale);
   return {
     state: 'AWAITING_ROLL',
     currentRolledFace: null,
@@ -49,10 +55,11 @@ export function newCombat(type: EnemyType, die: CombatDie, hp: number, maxHp: nu
     playerMaxHp: maxHp,
     playerShield: 0,
     enemyType: type,
+    enemyScale,
     enemyHp,
     enemyMaxHp: enemyHp,
     enemyShield: 0,
-    currentIntent: enemyIntent(type, 1, enemyHp, enemyHp, 0),
+    currentIntent: enemyIntent(type, 1, enemyHp, enemyHp, 0, enemyScale),
     effects: {
       playerPoison: emptyPoison(),
       enemyPoison: emptyPoison(),
@@ -234,6 +241,7 @@ export function decideCombat(
     state.enemyHp,
     state.enemyMaxHp,
     state.enemyShield,
+    state.enemyScale ?? 600,
   );
   return state;
 }

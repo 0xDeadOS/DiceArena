@@ -1,11 +1,15 @@
 import type { ApiErrorDTO } from '@dicebound/shared-types';
 export type GamePath =
   | '/api/map/start'
+  | '/api/expedition/start'
   | '/api/map/step'
   | '/api/map/retreat'
   | '/api/battle/roll'
   | '/api/battle/decision';
 export type InventoryPath =
+  | '/api/tutorial/reward'
+  | '/api/tutorial/complete'
+  | '/api/inventory/claim'
   | '/api/inventory/equip'
   | '/api/inventory/lock'
   | '/api/inventory/dismantle'

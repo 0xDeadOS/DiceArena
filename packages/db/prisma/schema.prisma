@@ -32,6 +32,11 @@ enum SphereType {
   CLEANSING
 }
 
+enum RunMode {
+  TRAINING
+  EXPEDITION
+}
+
 enum RunStatus {
   IN_PROGRESS
   VICTORY
@@ -86,27 +91,32 @@ model User {
 }
 
 model RoomMember {
-  id                 String              @id @default(uuid()) @db.Uuid
-  roomId             String              @db.Uuid
-  userId             String              @db.Uuid
-  gold               Int                 @default(150)
-  sealFragments      Int                 @default(0)
-  equippedDieId      String?             @unique @db.Uuid
-  vigorUpdatedAt     DateTime            @default(now()) @db.Timestamptz(3)
-  storedVigor        Int                 @default(3)
-  facetDust          Int                 @default(0)
-  inventoryRevision  Int                 @default(0)
-  tutorialDone       Boolean             @default(false)
-  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
-  room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String              @id @default(uuid()) @db.Uuid
+  roomId                 String              @db.Uuid
+  userId                 String              @db.Uuid
+  gold                   Int                 @default(150)
+  sealFragments          Int                 @default(0)
+  equippedDieId          String?             @unique @db.Uuid
+  vigorUpdatedAt         DateTime            @default(now()) @db.Timestamptz(3)
+  storedVigor            Int                 @default(3)
+  facetDust              Int                 @default(0)
+  inventoryRevision      Int                 @default(0)
+  tutorialDone           Boolean             @default(false)
+  tutorialTrainingWon    Boolean             @default(false)
+  tutorialCrafted        Boolean             @default(false)
+  tutorialRewardClaimed  Boolean             @default(false)
+  highestExpeditionLevel Int                 @default(0)
+  pendingDrops           PendingDrop[]
+  createdAt              DateTime            @default(now()) @db.Timestamptz(3)
+  room                   Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Composite FK prevents equipping a die owned by another member/chat.
-  equippedDie        Die?                @relation("EquippedDie", fields: [equippedDieId, id], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction)
-  dice               Die[]               @relation("OwnedDice")
-  currencies         UserCurrency[]
-  mapRuns            MapRun[]
-  raidAttacks        RaidAttack[]
-  idempotencyRecords IdempotencyRecord[]
+  equippedDie            Die?                @relation("EquippedDie", fields: [equippedDieId, id], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction)
+  dice                   Die[]               @relation("OwnedDice")
+  currencies             UserCurrency[]
+  mapRuns                MapRun[]
+  raidAttacks            RaidAttack[]
+  idempotencyRecords     IdempotencyRecord[]
 
   @@unique([roomId, userId])
   @@unique([equippedDieId, id])
@@ -148,27 +158,32 @@ model UserCurrency {
 }
 
 model MapRun {
-  id              String     @id @default(uuid()) @db.Uuid
-  ownerId         String     @db.Uuid
-  seed            String     @db.Char(64)
-  hasVigorBoost   Boolean    @default(true)
-  status          RunStatus  @default(IN_PROGRESS)
-  currentNodeId   String     @default("start")
-  revision        Int        @default(0)
+  id              String        @id @default(uuid()) @db.Uuid
+  ownerId         String        @db.Uuid
+  seed            String        @db.Char(64)
+  hasVigorBoost   Boolean       @default(true)
+  mode            RunMode       @default(TRAINING)
+  level           Int           @default(0)
+  enemyScale      Int           @default(600)
+  status          RunStatus     @default(IN_PROGRESS)
+  currentNodeId   String        @default("start")
+  revision        Int           @default(0)
   dieSnapshot     Json?
-  visitedNodeIds  Json       @default("[]")
+  visitedNodeIds  Json          @default("[]")
   settledLoot     Json?
-  lootSettledAt   DateTime?  @db.Timestamptz(3)
+  lootSettledAt   DateTime?     @db.Timestamptz(3)
   dagMapData      Json
   playerHp        Int
   playerMaxHp     Int
-  accumulatedLoot Json       @default("{}")
-  createdAt       DateTime   @default(now()) @db.Timestamptz(3)
-  completedAt     DateTime?  @db.Timestamptz(3)
-  owner           RoomMember @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  accumulatedLoot Json          @default("{}")
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  completedAt     DateTime?     @db.Timestamptz(3)
+  owner           RoomMember    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   // One run has many battles, but SQL allows only one unfinished battle.
   battles         Battle[]
+  pendingDrops    PendingDrop[]
 
+  @@unique([id, ownerId])
   @@index([ownerId, status])
   @@index([ownerId, completedAt])
 }
@@ -256,4 +271,16 @@ model GameEvent {
   room      Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@index([sentAt, createdAt])
+}
+
+model PendingDrop {
+  id        String     @id @db.Uuid
+  ownerId   String     @db.Uuid
+  runId     String     @db.Uuid
+  dieData   Json
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  owner     RoomMember @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  run       MapRun     @relation(fields: [runId, ownerId], references: [id, ownerId], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
 }

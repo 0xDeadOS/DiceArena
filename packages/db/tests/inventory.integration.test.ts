@@ -332,7 +332,7 @@ describe('PostgreSQL inventory and workshop', () => {
         key,
         NOW,
       );
-      expect(result.result.dieId).toBe(local);
+      expect(result.result).toMatchObject({ type: 'CRAFT', dieId: local });
       expect(local).not.toBe(starter);
     }
   });

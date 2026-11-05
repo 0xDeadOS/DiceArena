@@ -8,15 +8,22 @@ export const ENEMIES: Record<EnemyType, { name: string; hp: number }> = {
   BLOOD_PRIEST: { name: 'Кровавый жрец', hp: 40 },
   BONE_KING: { name: 'Король костей', hp: 75 },
 };
-// Level-zero training only. Normal difficulty/progression is deliberately not unlocked yet.
-export const trainingValue = (value: number) => Math.max(1, Math.round(value * 0.6));
+/** Integer per-mille scaling is frozen on each run, never inferred from current gear. */
+export function scaledEnemyValue(value: number, scale: number) {
+  if (!Number.isInteger(scale) || scale < 100 || scale > 5000)
+    throw new RangeError('Invalid enemy scale');
+  return Math.max(1, Math.round((value * scale) / 1000));
+}
+export const trainingValue = (value: number) => scaledEnemyValue(value, 600);
 export function enemyIntent(
   type: EnemyType,
   turn: number,
   hp: number,
   maxHp: number,
   shield: number,
+  scale = 600,
 ): EnemyIntent {
+  const scaled = (value: number) => scaledEnemyValue(value, scale);
   const intent = (
     kind: EnemyIntent['kind'],
     label: string,
@@ -34,14 +41,14 @@ export function enemyIntent(
     ...extra,
   });
   const attack = (label: string, value: number, extra: Partial<EnemyIntent> = {}) =>
-    intent('ATTACK', label, trainingValue(value), extra);
+    intent('ATTACK', label, scaled(value), extra);
   const guard = (label: string, value: number, extra: Partial<EnemyIntent> = {}) =>
-    intent('GUARD', label, trainingValue(value), extra);
+    intent('GUARD', label, scaled(value), extra);
   switch (type) {
     case 'SLIME':
       return turn % 2 === 1
         ? attack('Удар слизью', 5)
-        : guard('Панцирь и восстановление', 4, { heal: trainingValue(3) });
+        : guard('Панцирь и восстановление', 4, { heal: scaled(3) });
     case 'SPEARMAN':
       return turn % 3 === 1
         ? attack('Укол копьём', 6)
@@ -50,17 +57,14 @@ export function enemyIntent(
           : attack('Тяжёлый удар', 12);
     case 'PLAGUE_RAT':
       return turn % 2 === 1
-        ? attack('Ядовитый укус', 4, { kind: 'POISON_ATTACK', poison: trainingValue(2) })
+        ? attack('Ядовитый укус', 4, { kind: 'POISON_ATTACK', poison: scaled(2) })
         : attack('Укус', 6);
     case 'STONE_GUARD':
       return turn % 2 === 1
         ? guard('Каменный щит', 10)
-        : intent(
-            'SHIELD_BASH',
-            'Толчок: базовый урон + оставшийся щит',
-            trainingValue(8) + shield,
-            { baseValue: trainingValue(8) },
-          );
+        : intent('SHIELD_BASH', 'Толчок: базовый урон + оставшийся щит', scaled(8) + shield, {
+            baseValue: scaled(8),
+          });
     case 'BLOOD_PRIEST':
       return turn % 2 === 1
         ? attack('Кровавый удар', 7, { lifestealPercent: 50 })
@@ -68,6 +72,6 @@ export function enemyIntent(
     case 'BONE_KING':
       return turn % 2 === 1
         ? attack(hp < maxHp / 2 ? 'Яростный удар' : 'Костяной удар', hp < maxHp / 2 ? 14 : 9)
-        : guard('Щит с шипами', 8, { thorns: trainingValue(3) });
+        : guard('Щит с шипами', 8, { thorns: scaled(3) });
   }
 }

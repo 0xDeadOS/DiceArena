@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { HubDTO } from '@dicebound/shared-types';
 import { fixtureHub, signedInitData } from '../fixtures.js';
 export async function telegramLaunch(page: Page) {
   const initData = signedInitData();
@@ -28,9 +29,8 @@ export async function telegramLaunch(page: Page) {
   }, initData);
   return initData;
 }
-export async function authenticatedPage(page: Page) {
+export async function authenticatedPage(page: Page, hub: HubDTO = fixtureHub()) {
   const raw = await telegramLaunch(page);
-  const hub = fixtureHub();
   await page.route('**/api/auth/session', (route) =>
     route.fulfill({ json: { hub, authExpiresAt: '2026-11-05T12:00:00Z' } }),
   );

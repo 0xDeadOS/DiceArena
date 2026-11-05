@@ -33,7 +33,11 @@ export const useGame = create<GameState>((set, get) => {
       const current = replay ? await sessionRequest<RunResponse>('/api/map/current') : { run };
       if (token !== generation) return;
       set({ run: current.run, ready: true });
-      if (pending.path === '/api/map/start' || current.run?.status !== 'IN_PROGRESS')
+      if (
+        pending.path === '/api/map/start' ||
+        pending.path === '/api/expedition/start' ||
+        current.run?.status !== 'IN_PROGRESS'
+      )
         void useSession.getState().refresh();
     } catch (error) {
       if (token !== generation) return;

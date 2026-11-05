@@ -7,6 +7,7 @@ import {
   Gem,
   Hexagon,
   Map,
+  PackageOpen,
   Shield,
   ShieldCheck,
   Sparkles,
@@ -17,6 +18,13 @@ import { DieSculpture, FlatDie } from '../components/Die';
 import { Orb } from '../components/Orb';
 import { BASE_NAMES, SPHERES, RARITY_NAMES } from '../lib/catalog';
 
+const TUTORIAL_ORDER = ['TRAINING', 'REWARD', 'CRAFT', 'COMPLETE'] as const;
+const TUTORIAL_HINTS: Record<string, string> = {
+  TRAINING: 'Победите в тренировочных катакомбах — бой настоящий.',
+  REWARD: 'Заберите учебную сферу Отливки за первую победу.',
+  CRAFT: 'Примените любую сферу в Мастерской.',
+  COMPLETE: 'Завершите обучение, чтобы открыть обычные экспедиции.',
+};
 interface Props {
   hub: HubDTO;
   onInventory: () => void;
@@ -108,13 +116,51 @@ export function Hub({
           </span>
           <div>
             <span className="eyebrow">ЗА ПОРОГОМ ОБИТЕЛИ</span>
-            <h3>Тренировочные катакомбы</h3>
-            <p>Семь уровней. Без затрат бодрости.</p>
+            <h3>
+              {hub.player.tutorial.step === 'DONE'
+                ? `Экспедиции до уровня ${Math.min(50, hub.player.highestExpeditionLevel + 1)}`
+                : 'Тренировочные катакомбы'}
+            </h3>
+            <p>
+              {hub.player.tutorial.step === 'DONE'
+                ? `Спуск стоит 1 бодрость. Сейчас ${hub.player.vigor.current} из ${hub.player.vigor.maximum}.`
+                : 'Семь уровней. Без затрат бодрости.'}
+            </p>
           </div>
           <button className="upcoming-button" onClick={onExpeditions}>
             {hub.activeRun ? 'Продолжить' : 'В путь'} <ArrowUpRight size={15} />
           </button>
         </section>
+        {hub.player.tutorial.step !== 'DONE' && (
+          <section className="tutorial-progress">
+            <span className="check-emblem">
+              <Sparkles size={16} />
+            </span>
+            <div>
+              <strong>
+                Обучение · шаг {TUTORIAL_ORDER.indexOf(hub.player.tutorial.step) + 1} из 4
+              </strong>
+              <span>{TUTORIAL_HINTS[hub.player.tutorial.step]}</span>
+            </div>
+            <button onClick={onExpeditions} aria-label="Открыть обучение">
+              <ChevronRight size={18} />
+            </button>
+          </section>
+        )}
+        {hub.inventory.pendingDrops.length > 0 && (
+          <section className="starter-strip pending-strip">
+            <span className="check-emblem">
+              <PackageOpen size={16} />
+            </span>
+            <div>
+              <strong>Трофеи ждут: {hub.inventory.pendingDrops.length}</strong>
+              <span>Возьмите в сумку или распылите — без подтверждения ничего не пропадёт.</span>
+            </div>
+            <button onClick={onInventory} aria-label="Открыть трофеи">
+              <ChevronRight size={18} />
+            </button>
+          </section>
+        )}
       </div>
       <aside className="aside-column">
         {die && (

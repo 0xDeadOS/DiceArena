@@ -8,16 +8,19 @@ import {
   Dices,
   DoorOpen,
   Flame,
+  Gem,
   Heart,
   LoaderCircle,
   LockKeyhole,
+  PackageOpen,
   RefreshCw,
+  ScrollText,
   Shield,
   Skull,
   Sparkles,
+  Sun,
   Sword,
   Tent,
-  PackageOpen,
   Undo2,
   Zap,
 } from 'lucide-react';
@@ -30,10 +33,12 @@ import type {
 } from '@dicebound/shared-types';
 import { useSession } from '../stores/session';
 import { useGame } from '../stores/game';
+import { useInventory } from '../stores/inventory';
 import { demoRun } from '../lib/demo-run';
 import { ACTIONS, BASE_NAMES } from '../lib/catalog';
 import { DieSculpture, FlatDie } from '../components/Die';
 import { Modal } from '../components/Modal';
+import { CraftResult } from '../components/CraftResult';
 
 const NODES: Record<MapNodeType, { name: string; icon: typeof Sword }> = {
   START: { name: 'Обитель', icon: Flame },
@@ -44,15 +49,35 @@ const NODES: Record<MapNodeType, { name: string; icon: typeof Sword }> = {
   BOSS: { name: 'Босс', icon: Crown },
 };
 const example = demoRun();
+const SPHERE_LABELS: Record<string, string> = {
+  TEMPERING: 'Закалки',
+  FACETING: 'Огранки',
+  CASTING: 'Отливки',
+  ASCENDANCE: 'Восхождения',
+  RESHAPING: 'Перековки',
+  CLEANSING: 'Очищения',
+};
 export function Expeditions({ onEntry }: { onEntry: () => void }) {
   const demo = useSession((s) => s.mode) === 'demo';
+  const hub = useSession((s) => s.hub)!;
   const { run: current, ready, busy, error, pending, load, submit, retry } = useGame();
+  const wallet = useInventory();
   const [confirmRetreat, setConfirmRetreat] = useState(false);
+  const [confirmLevel, setConfirmLevel] = useState<number | null>(null);
   useEffect(() => {
     if (!demo) void load();
   }, [demo, load]);
+  // Onboarding actions are inventory mutations, so the wallet state must be loaded first.
+  useEffect(() => {
+    if (!demo && !wallet.ready && !wallet.busy) void wallet.load();
+  }, [demo, wallet.ready, wallet.busy, wallet.load]);
   const run = demo ? example : current;
   const locked = demo || busy || !!pending || !ready;
+  const tutorial = hub.player.tutorial;
+  const revision = hub.player.inventoryRevision;
+  const maxLevel = Math.min(50, hub.player.highestExpeditionLevel + 1);
+  const pendingDrops = hub.inventory.pendingDrops;
+  const expeditionReady = tutorial.step === 'DONE' && pendingDrops.length === 0;
   const step = (nodeId: string) => {
     if (run)
       void submit('/api/map/step', { runId: run.id, expectedRevision: run.revision, nodeId });
@@ -66,6 +91,44 @@ export function Expeditions({ onEntry }: { onEntry: () => void }) {
       ...(action ? { action } : {}),
     });
   };
+  const tutorialSteps = [
+    {
+      key: 'TRAINING' as const,
+      done: tutorial.trainingWon,
+      title: 'Победить в тренировочных катакомбах',
+      hint: 'Настоящий бой: бросок, стойка, переброс. Победа засчитывается только на сервере.',
+      label: 'К тренировке',
+      action: () => void submit('/api/map/start', {}),
+    },
+    {
+      key: 'REWARD' as const,
+      done: tutorial.rewardClaimed,
+      title: 'Забрать учебную сферу Отливки',
+      hint: 'Разовая награда за первую победу: +1 сфера Отливки в кошелёк.',
+      label: 'Забрать сферу',
+      action: () =>
+        void wallet.submit('/api/tutorial/reward', {
+          expectedRevision: revision,
+          confirmed: true,
+        }),
+    },
+    {
+      key: 'CRAFT' as const,
+      done: tutorial.crafted,
+      title: 'Применить любую сферу в Мастерской',
+      hint: 'Любой успешный крафт засчитывается. Сферы тратятся только после подтверждения.',
+      label: null,
+      action: null,
+    },
+    {
+      key: 'COMPLETE' as const,
+      done: tutorial.step === 'DONE',
+      title: 'Завершить обучение',
+      hint: 'Явный шаг: после него открываются обычные экспедиции с предметами и сферами.',
+      label: null,
+      action: null,
+    },
+  ];
   return (
     <div className="expeditions-screen">
       {demo ? (
@@ -98,6 +161,7 @@ export function Expeditions({ onEntry }: { onEntry: () => void }) {
           {error}
         </div>
       )}
+      {wallet.result && <CraftResult result={wallet.result} onClose={wallet.clearResult} />}
       {pending && (
         <div className="training-notice retry-notice" role="status">
           <RefreshCw size={18} />
@@ -118,179 +182,366 @@ export function Expeditions({ onEntry }: { onEntry: () => void }) {
           <LoaderCircle className="spin" />
           <p>Находим сохранённый маршрут…</p>
         </div>
-      ) : !run ? (
-        <section className="training-intro panel">
-          <div className="training-crest">
-            <Compass size={58} strokeWidth={1} />
-          </div>
-          <span className="eyebrow">ПЕРВЫЙ СПУСК · УРОВЕНЬ 0</span>
-          <h2>Тренировочные катакомбы</h2>
-          <p>
-            Семь уровней до Короля костей. Выбирайте путь, читайте намерения врага и находите
-            сильную сторону каждой грани.
-          </p>
-          <div className="training-perks">
-            <span>
-              <Zap size={16} />
-              Без затрат бодрости
-            </span>
-            <span>
-              <Coins size={16} />
-              Золото и пыль
-            </span>
-            <span>
-              <Shield size={16} />
-              Кубик остаётся с вами
-            </span>
-          </div>
-          <button
-            className="button primary"
-            disabled={locked}
-            onClick={() => void submit('/api/map/start', {})}
-          >
-            Начать тренировку <ArrowRight size={17} />
-          </button>
-          <small>
-            Победа: вся добыча. Поражение или отступление: 40%, с округлением вниз. Предметы и сферы
-            здесь не выпадают.
-          </small>
-        </section>
       ) : (
         <>
-          <div className="run-summary">
-            <span>
-              <Compass size={17} />
-              Уровень {run.nodes.find((n) => n.id === run.currentNodeId)?.depth ?? 0} / 7
-            </span>
-            <span>
-              <Heart size={17} />
-              {run.playerHp} / {run.playerMaxHp} HP
-            </span>
-            <span title="Добыча будет начислена только после завершения похода">
-              <Coins size={17} />
-              {run.loot.gold} <small>золота</small>
-            </span>
-            <span>
-              <Sparkles size={16} />
-              {run.loot.dust} <small>пыли</small>
-            </span>
-          </div>
-          <div className="expedition-layout">
-            <aside className="route-column panel">
-              <div className="route-heading">
-                <div>
-                  <span className="eyebrow">ОДИН КУБИК · ВАШ ПУТЬ</span>
-                  <h2>Вниз, во тьму.</h2>
+          {(!run || demo) && (
+            <div className="expedition-entry">
+              {tutorial.step !== 'DONE' && (
+                <section className="tutorial-card panel" aria-label="Обучение">
+                  <div className="route-heading">
+                    <div>
+                      <span className="eyebrow">
+                        ПОЛЕВОЕ ОБУЧЕНИЕ · ШАГ{' '}
+                        {tutorialSteps.findIndex((item) => item.key === tutorial.step) + 1} / 4
+                      </span>
+                      <h2>Четыре шага до настоящего спуска.</h2>
+                    </div>
+                    <ScrollText size={23} />
+                  </div>
+                  <ol className="tutorial-steps">
+                    {tutorialSteps.map((item) => {
+                      const done = item.done;
+                      const active = item.key === tutorial.step;
+                      return (
+                        <li key={item.key} className={done ? 'done' : active ? 'active' : ''}>
+                          <span className="tutorial-mark">
+                            {done ? <Check size={15} /> : <span />}
+                          </span>
+                          <div>
+                            <strong>{item.title}</strong>
+                            <p>{item.hint}</p>
+                          </div>
+                          {active && !demo && item.action && (
+                            <button
+                              className="button secondary"
+                              disabled={locked || wallet.busy || !!wallet.pending}
+                              onClick={item.action}
+                            >
+                              {item.label} <ArrowRight size={15} />
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  {tutorial.step === 'COMPLETE' && !demo && (
+                    <button
+                      className="button primary full"
+                      disabled={locked || wallet.busy || !!wallet.pending}
+                      onClick={() =>
+                        void wallet.submit('/api/tutorial/complete', {
+                          expectedRevision: revision,
+                          confirmed: true,
+                        })
+                      }
+                    >
+                      Завершить обучение <ArrowRight size={16} />
+                    </button>
+                  )}
+                  <p className="small-text muted">
+                    Прогресс сохраняется на сервере. Обычные экспедиции откроются после явного
+                    завершения обучения.
+                  </p>
+                </section>
+              )}
+              <section className="training-intro panel">
+                <div className="training-crest">
+                  <Compass size={58} strokeWidth={1} />
                 </div>
-                <Compass size={23} />
-              </div>
-              <RouteMap run={run} locked={locked} onStep={step} />
-              <p className="route-note">
-                {run.status !== 'IN_PROGRESS'
-                  ? 'Этот маршрут завершён.'
-                  : run.battle?.state !== 'FINISHED' && run.battle
-                    ? 'Завершите бой, чтобы выбрать следующий узел.'
-                    : 'Золотой контур — доступный следующий узел.'}
-              </p>
-              <div className="run-loadout">
-                <Dices size={19} />
-                <span>
-                  {BASE_NAMES[run.loadout.baseType]}
-                  <small>PS {run.loadout.powerScore} · снаряжение зафиксировано</small>
-                </span>
-              </div>
-              {run.status === 'IN_PROGRESS' && !demo && (
-                <button
-                  className="text-button retreat-link"
-                  disabled={locked}
-                  onClick={() => setConfirmRetreat(true)}
-                >
-                  <DoorOpen size={16} />
-                  Отступить в Обитель
-                </button>
-              )}
-            </aside>
-            <div className="battle-column">
-              {run.status !== 'IN_PROGRESS' ? (
-                <section className="run-result panel" aria-live="polite">
-                  {run.status === 'VICTORY' ? <Crown size={45} /> : <Flame size={45} />}
-                  <span className="eyebrow">ПОХОД ЗАВЕРШЁН</span>
-                  <h2>{run.status === 'VICTORY' ? 'Катакомбы пройдены.' : 'Вы снова у костра.'}</h2>
-                  <p>
-                    {run.status === 'VICTORY'
-                      ? 'Вся собранная добыча уже в вашем кошельке.'
-                      : '40% добычи, с округлением вниз, уже зачислены. Кубик и сферы не потеряны.'}
-                  </p>
-                  <div className="settled-reward">
-                    <span>
-                      <Coins size={21} />+{run.reward?.gold ?? 0} золота
-                    </span>
-                    <span>
-                      <Sparkles size={21} />+{run.reward?.dust ?? 0} пыли
-                    </span>
-                  </div>
-                  <button
-                    className="button primary"
-                    disabled={locked}
-                    onClick={() => void submit('/api/map/start', {})}
-                  >
-                    Новая тренировка <ArrowRight size={16} />
-                  </button>
-                </section>
-              ) : run.battle?.state !== 'FINISHED' && run.battle ? (
-                <Battle battle={run.battle} locked={locked} busy={busy} onAction={battleAction} />
-              ) : (
-                <section className="node-result panel">
-                  <span className="training-crest">
-                    {run.battle ? <Check size={42} /> : <Compass size={42} />}
+                <span className="eyebrow">ПЕРВЫЙ СПУСК · УРОВЕНЬ 0</span>
+                <h2>Тренировочные катакомбы</h2>
+                <p>
+                  Семь уровней до Короля костей. Выбирайте путь, читайте намерения врага и находите
+                  сильную сторону каждой грани.
+                </p>
+                <div className="training-perks">
+                  <span>
+                    <Zap size={16} />
+                    Без затрат бодрости
                   </span>
-                  <span className="eyebrow">ПУТЬ ПРОДОЛЖАЕТСЯ</span>
-                  <h2>
-                    {run.battle
-                      ? 'Противник повержен.'
-                      : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CHEST'
-                        ? 'Небольшое сокровище.'
-                        : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CAMP'
-                          ? 'Передышка у огня.'
-                          : 'Катакомбы ждут.'}
-                  </h2>
-                  <p>
-                    {run.battle
-                      ? 'Добыча добавлена в рюкзак. Выберите следующий узел.'
-                      : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CHEST'
-                        ? 'В рюкзак добавлены 3 золота и 1 пыль.'
-                        : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CAMP'
-                          ? 'Восстановлено до 35% максимального здоровья (округление вверх). Можно идти дальше.'
-                          : 'Первый противник — пещерный слизень. Держите кубик крепче.'}
-                  </p>
-                  <div className="next-node-actions">
-                    {run.nodes
-                      .filter((n) => run.availableNodeIds.includes(n.id))
-                      .map((node) => {
-                        const Icon = NODES[node.type].icon;
-                        return (
-                          <button
-                            key={node.id}
-                            className="button secondary"
-                            disabled={locked}
-                            onClick={() => step(node.id)}
-                          >
-                            <Icon size={17} />
-                            Дальше: {NODES[node.type].name}
-                            <ArrowRight size={15} />
-                          </button>
-                        );
-                      })}
+                  <span>
+                    <Coins size={16} />
+                    Золото и пыль
+                  </span>
+                  <span>
+                    <Shield size={16} />
+                    Кубик остаётся с вами
+                  </span>
+                </div>
+                <button
+                  className="button primary"
+                  disabled={locked}
+                  onClick={() => void submit('/api/map/start', {})}
+                >
+                  Начать тренировку <ArrowRight size={17} />
+                </button>
+                <small>
+                  Победа: вся добыча. Поражение или отступление: 40%, с округлением вниз. Предметы и
+                  сферы здесь не выпадают.
+                </small>
+              </section>
+              {tutorial.step === 'DONE' && (
+                <section className="normal-expedition panel">
+                  <div className="route-heading">
+                    <div>
+                      <span className="eyebrow">ОБЫЧНАЯ ЭКСПЕДИЦИЯ · ДО УРОВНЯ {maxLevel}</span>
+                      <h2>Настоящая тьма платит по-настоящему.</h2>
+                    </div>
+                    <Sun size={23} />
                   </div>
+                  <p className="small-text">
+                    Один спуск стоит <strong>1 бодрость</strong> (сейчас {hub.player.vigor.current}{' '}
+                    из {hub.player.vigor.maximum}). Сложность и награды фиксируются в момент старта,
+                    вместе со снарядом.
+                  </p>
+                  {pendingDrops.length > 0 && (
+                    <div className="error-banner" role="status">
+                      В сумке ждут трофеи прошлого похода ({pendingDrops.length}). Заберите или
+                      распылите их в инвентаре, чтобы спуститься снова.
+                    </div>
+                  )}
+                  <div className="level-grid" role="group" aria-label="Доступные уровни">
+                    {Array.from({ length: maxLevel }, (_, index) => index + 1).map((level) => (
+                      <button
+                        key={level}
+                        className="level-chip"
+                        disabled={locked || !expeditionReady || hub.player.vigor.current < 1}
+                        onClick={() => setConfirmLevel(level)}
+                        aria-label={`Экспедиция уровня ${level}`}
+                      >
+                        <strong>{level}</strong>
+                        <small>уровень</small>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="small-text muted">
+                    Победа открывает следующий уровень. Поражение или отступление сохраняют 40%
+                    золота, пыли и сфер и 40% найденных кубиков — с округлением вниз.
+                  </p>
                 </section>
               )}
-              <p className="training-footnote">
-                <Shield size={14} />
-                Тренировка не расходует бодрость. Закрытие приложения не меняет грань или намерение.
-              </p>
             </div>
-          </div>
+          )}
+          {run && (
+            <>
+              <div className="run-summary">
+                {run.mode === 'EXPEDITION' && (
+                  <span>
+                    <Sword size={17} />
+                    Экспедиция · уровень {run.level ?? 1}
+                  </span>
+                )}
+                <span>
+                  <Compass size={17} />
+                  Глубина {run.nodes.find((n) => n.id === run.currentNodeId)?.depth ?? 0} / 7
+                </span>
+                <span>
+                  <Heart size={17} />
+                  {run.playerHp} / {run.playerMaxHp} HP
+                </span>
+                <span title="Добыча будет начислена только после завершения похода">
+                  <Coins size={17} />
+                  {run.loot.gold} <small>золота</small>
+                </span>
+                <span>
+                  <Sparkles size={16} />
+                  {run.loot.dust} <small>пыли</small>
+                </span>
+                {run.mode === 'EXPEDITION' && (
+                  <>
+                    <span title="Сферы начисляются только после завершения похода">
+                      <Gem size={16} />
+                      {(run.loot.spheres ?? []).reduce((sum, stack) => sum + stack.amount, 0)}{' '}
+                      <small>сфер</small>
+                    </span>
+                    <span title="Кубики попадают в трофеи, а не в сумку автоматически">
+                      <PackageOpen size={16} />
+                      {(run.loot.dice ?? []).length} <small>трофеев</small>
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="expedition-layout">
+                <aside className="route-column panel">
+                  <div className="route-heading">
+                    <div>
+                      <span className="eyebrow">ОДИН КУБИК · ВАШ ПУТЬ</span>
+                      <h2>Вниз, во тьму.</h2>
+                    </div>
+                    <Compass size={23} />
+                  </div>
+                  <RouteMap run={run} locked={locked} onStep={step} />
+                  <p className="route-note">
+                    {run.status !== 'IN_PROGRESS'
+                      ? 'Этот маршрут завершён.'
+                      : run.battle?.state !== 'FINISHED' && run.battle
+                        ? 'Завершите бой, чтобы выбрать следующий узел.'
+                        : 'Золотой контур — доступный следующий узел.'}
+                  </p>
+                  <div className="run-loadout">
+                    <Dices size={19} />
+                    <span>
+                      {BASE_NAMES[run.loadout.baseType]}
+                      <small>PS {run.loadout.powerScore} · снаряжение зафиксировано</small>
+                    </span>
+                  </div>
+                  {run.status === 'IN_PROGRESS' && !demo && (
+                    <button
+                      className="text-button retreat-link"
+                      disabled={locked}
+                      onClick={() => setConfirmRetreat(true)}
+                    >
+                      <DoorOpen size={16} />
+                      Отступить в Обитель
+                    </button>
+                  )}
+                </aside>
+                <div className="battle-column">
+                  {run.status !== 'IN_PROGRESS' ? (
+                    <section className="run-result panel" aria-live="polite">
+                      {run.status === 'VICTORY' ? <Crown size={45} /> : <Flame size={45} />}
+                      <span className="eyebrow">ПОХОД ЗАВЕРШЁН</span>
+                      <h2>
+                        {run.status === 'VICTORY' ? 'Катакомбы пройдены.' : 'Вы снова у костра.'}
+                      </h2>
+                      <p>
+                        {run.status === 'VICTORY'
+                          ? 'Вся собранная добыча уже в вашем кошельке.'
+                          : '40% добычи, с округлением вниз, уже зачислены. Кубик и сферы не потеряны.'}
+                      </p>
+                      <div className="settled-reward">
+                        <span>
+                          <Coins size={21} />+{run.reward?.gold ?? 0} золота
+                        </span>
+                        <span>
+                          <Sparkles size={21} />+{run.reward?.dust ?? 0} пыли
+                        </span>
+                        {(run.reward?.spheres ?? []).map((stack) => (
+                          <span key={stack.type}>
+                            <Gem size={21} />+{stack.amount} {SPHERE_LABELS[stack.type]}
+                          </span>
+                        ))}
+                      </div>
+                      {(run.reward?.dice ?? []).length > 0 && (
+                        <p className="small-text">
+                          Найдено кубиков: <strong>{run.reward!.dice!.length}</strong>. Они ждут в
+                          трофеях — возьмите в сумку или распылите на пыль. Ничего не уничтожается
+                          без вашего подтверждения.
+                        </p>
+                      )}
+                      {run.mode === 'TRAINING' ? (
+                        <button
+                          className="button primary"
+                          disabled={locked}
+                          onClick={() => void submit('/api/map/start', {})}
+                        >
+                          Новая тренировка <ArrowRight size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          className="button primary"
+                          disabled={locked || !expeditionReady}
+                          onClick={() => setConfirmLevel(Math.min(maxLevel, run.level ?? 1))}
+                        >
+                          {expeditionReady ? 'Новый спуск' : 'Сначала разберите трофеи'}{' '}
+                          <ArrowRight size={16} />
+                        </button>
+                      )}
+                    </section>
+                  ) : run.battle?.state !== 'FINISHED' && run.battle ? (
+                    <Battle
+                      battle={run.battle}
+                      locked={locked}
+                      busy={busy}
+                      onAction={battleAction}
+                    />
+                  ) : (
+                    <section className="node-result panel">
+                      <span className="training-crest">
+                        {run.battle ? <Check size={42} /> : <Compass size={42} />}
+                      </span>
+                      <span className="eyebrow">ПУТЬ ПРОДОЛЖАЕТСЯ</span>
+                      <h2>
+                        {run.battle
+                          ? 'Противник повержен.'
+                          : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CHEST'
+                            ? 'Небольшое сокровище.'
+                            : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CAMP'
+                              ? 'Передышка у огня.'
+                              : 'Катакомбы ждут.'}
+                      </h2>
+                      <p>
+                        {run.battle
+                          ? 'Добыча добавлена в рюкзак. Выберите следующий узел.'
+                          : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CHEST'
+                            ? 'В рюкзак добавлены 3 золота и 1 пыль.'
+                            : run.nodes.find((n) => n.id === run.currentNodeId)?.type === 'CAMP'
+                              ? 'Восстановлено до 35% максимального здоровья (округление вверх). Можно идти дальше.'
+                              : 'Первый противник — пещерный слизень. Держите кубик крепче.'}
+                      </p>
+                      <div className="next-node-actions">
+                        {run.nodes
+                          .filter((n) => run.availableNodeIds.includes(n.id))
+                          .map((node) => {
+                            const Icon = NODES[node.type].icon;
+                            return (
+                              <button
+                                key={node.id}
+                                className="button secondary"
+                                disabled={locked}
+                                onClick={() => step(node.id)}
+                              >
+                                <Icon size={17} />
+                                Дальше: {NODES[node.type].name}
+                                <ArrowRight size={15} />
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </section>
+                  )}
+                  <p className="training-footnote">
+                    <Shield size={14} />
+                    Тренировка не расходует бодрость. Закрытие приложения не меняет грань или
+                    намерение.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </>
+      )}
+      {confirmLevel !== null && (
+        <Modal
+          eyebrow="ОБЫЧНАЯ ЭКСПЕДИЦИЯ"
+          title={`Спуститься на уровень ${confirmLevel}?`}
+          onClose={() => setConfirmLevel(null)}
+        >
+          <div className="prose">
+            <p>
+              Стоимость: <strong>1 бодрость</strong> из {hub.player.vigor.current}. Снаряжение и
+              сложность фиксируются сейчас и не изменятся до конца похода.
+            </p>
+            {revision !== hub.player.inventoryRevision && (
+              <p role="alert">Ресурсы изменились. Закройте окно и подтвердите заново.</p>
+            )}
+            <button
+              className="button primary full"
+              disabled={locked || revision !== hub.player.inventoryRevision}
+              onClick={() => {
+                const level = confirmLevel;
+                setConfirmLevel(null);
+                void submit('/api/expedition/start', {
+                  level,
+                  expectedInventoryRevision: revision,
+                  confirmed: true,
+                });
+              }}
+            >
+              Подтвердить спуск <ArrowRight size={16} />
+            </button>
+          </div>
+        </Modal>
       )}
       {confirmRetreat && run && (
         <Modal title="Вернуться к костру?" onClose={() => setConfirmRetreat(false)}>

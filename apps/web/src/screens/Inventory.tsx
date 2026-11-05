@@ -1,5 +1,15 @@
-import { Check, Hammer, LockKeyhole, Plus, ShieldCheck, Trash2, UnlockKeyhole } from 'lucide-react';
-import type { DieDTO } from '@dicebound/shared-types';
+import {
+  Check,
+  Gem,
+  Hammer,
+  LockKeyhole,
+  PackageOpen,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  UnlockKeyhole,
+} from 'lucide-react';
+import type { DieDTO, PendingDropDTO } from '@dicebound/shared-types';
 import { useState } from 'react';
 import { FlatDie } from '../components/Die';
 import { DieDetail } from '../components/DieDetail';
@@ -15,6 +25,7 @@ export function Inventory({ onWorkshop }: { onWorkshop: (dieId?: string) => void
   const [confirm, setConfirm] = useState<{ die: DieDTO; revision: number; dust: number } | null>(
     null,
   );
+  const [drop, setDrop] = useState<{ item: PendingDropDTO; revision: number } | null>(null);
   const selected = hub.inventory.dice.find((d) => d.id === selectedId) ?? hub.inventory.dice[0];
   const policy = state.inventory.policies.find((p) => p.dieId === selected?.id);
   const revision = hub.player.inventoryRevision;
@@ -68,11 +79,64 @@ export function Inventory({ onWorkshop }: { onWorkshop: (dieId?: string) => void
               ),
             )}
           </div>
+          {hub.inventory.pendingDrops.length > 0 && (
+            <div className="pending-drops" aria-label="Трофеи из походов">
+              <div className="section-heading">
+                <div>
+                  <h2>Трофеи ждут решения</h2>
+                  <span>Кубики из экспедиций не попадают в сумку сами</span>
+                </div>
+                <span className="count-tag">{hub.inventory.pendingDrops.length}</span>
+              </div>
+              {hub.inventory.pendingDrops.map((item) => (
+                <div className="pending-drop" key={item.id}>
+                  <FlatDie face={6} />
+                  <div>
+                    <strong>
+                      {BASE_NAMES[item.item.baseType]} · {item.item.powerScore} PS
+                    </strong>
+                    <small>
+                      УР. {item.item.ilvl} · распыление даст {item.dust} пыли
+                    </small>
+                  </div>
+                  <div className="pending-actions">
+                    <button
+                      className="button secondary"
+                      disabled={state.locked || !item.take.allowed}
+                      onClick={() =>
+                        void state.submit('/api/inventory/claim', {
+                          dropId: item.id,
+                          expectedRevision: revision,
+                          action: 'TAKE',
+                          confirmed: true,
+                        })
+                      }
+                    >
+                      <PackageOpen size={15} />В сумку
+                    </button>
+                    <button
+                      className="text-button dismantle-button"
+                      disabled={state.locked}
+                      onClick={() => setDrop({ item, revision })}
+                    >
+                      <Trash2 size={15} />
+                      Распылить
+                    </button>
+                  </div>
+                  {!item.take.allowed && (
+                    <p className="small-text muted" role="status">
+                      {item.take.reason}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="safety-note inventory-note">
             <ShieldCheck size={17} />
             <span>
-              Стартовый кубик нельзя распылить. Тренировка пока не выдаёт новые предметы — обычный
-              дроп появится позже.
+              Стартовый кубик нельзя распылить. Новые кубики приходят из обычных экспедиций: сначала
+              они ждут в трофеях, пока вы не возьмёте их в сумку или не распылите.
             </span>
           </div>
         </section>
@@ -137,6 +201,36 @@ export function Inventory({ onWorkshop }: { onWorkshop: (dieId?: string) => void
           )}
         </section>
       </div>
+      {drop && (
+        <Modal eyebrow="ТРОФЕЙ ИЗ ПОХОДА" title="Распылить трофей?" onClose={() => setDrop(null)}>
+          <div className="prose">
+            <p>
+              <strong>{BASE_NAMES[drop.item.item.baseType]}</strong> · {drop.item.item.powerScore}{' '}
+              PS будет удалён. Вы получите <strong>{drop.item.dust} пыли</strong>.
+            </p>
+            <p>Без подтверждения трофей остаётся в списке и ничего не теряется.</p>
+            {revision !== drop.revision && (
+              <p role="alert">Инвентарь изменился. Закройте окно и проверьте трофей заново.</p>
+            )}
+            <button
+              className="button primary full"
+              disabled={state.locked || revision !== drop.revision}
+              onClick={() => {
+                const captured = drop;
+                setDrop(null);
+                void state.submit('/api/inventory/claim', {
+                  dropId: captured.item.id,
+                  expectedRevision: captured.revision,
+                  action: 'DUST',
+                  confirmed: true,
+                });
+              }}
+            >
+              Подтвердить распыление <Gem size={16} />
+            </button>
+          </div>
+        </Modal>
+      )}
       {confirm && (
         <Modal
           eyebrow="ОПЕРАЦИЯ С ПРЕДМЕТОМ"
