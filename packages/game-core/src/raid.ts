@@ -1,7 +1,10 @@
-import type { FaceAction } from '@dicebound/shared-types';
-import { FACE_ACTIONS } from '@dicebound/shared-types';
+import type { CombatDie, DieFace, FaceAction } from '@dicebound/shared-types';
+import { DIE_BASES, FACE_ACTIONS } from '@dicebound/shared-types';
+import { parseCombatDie } from './catalog.js';
 import { hit } from './combat.js';
 import { requireRule } from './rules.js';
+import { evaluateDiePowerScore, facetingRange, rollAffixes } from './workshop.js';
+import type { RandomInt } from './workshop.js';
 
 /**
  * Асинхронный рейд Обители. Все числа ниже — явно выбранные временные параметры этого
@@ -174,3 +177,58 @@ export const raidRewardPool = (memberCount: number) => ({
   gold: 40 + 25 * Math.max(1, memberCount),
   dust: 4 + 3 * Math.max(1, memberCount),
 });
+
+/**
+ * Трофей рейда — единственный источник `UNIQUE` в игре. Он не выпадает случайно:
+ * Обитель получает его за победу над боссом, а дальше решает, кто достоин.
+ *
+ * Свойства не придуманы заново: `UNIQUE` — это вершина редкости, поэтому набор
+ * максимальный (2 префикса + 2 суффикса, предел схемы), а значения берутся из
+ * опубликованного диапазона третьего тира. Игрок видит, что именно ему достанется,
+ * до того как согласится, поэтому редкость не может быть ни сюрпризом, ни обманом.
+ *
+ * Уровень предмета растёт с уровнем Обители, но остаётся в пределах 1..50 — иначе
+ * нарушился бы CHECK `Die_values_valid`.
+ */
+export const RAID_TROPHY_TIER = 3;
+export function raidTrophyLevel(highestExpeditionLevel: number): number {
+  requireRule(
+    Number.isInteger(highestExpeditionLevel) &&
+      highestExpeditionLevel >= 0 &&
+      highestExpeditionLevel <= 50,
+    'INVALID_TROPHY_LEVEL',
+    'Недопустимый уровень Обители для трофея.',
+  );
+  // Уровень трофея опережает пройденный на два: рейд сложнее обычной экспедиции,
+  // а третий тир аффиксов открывается только с 20-го уровня предмета.
+  return Math.min(50, Math.max(20, highestExpeditionLevel + 2));
+}
+export function generateRaidTrophy(id: string, ilvl: number, random: RandomInt): CombatDie {
+  const level = raidTrophyLevel(ilvl);
+  const actions = [
+    FACE_ACTIONS[0],
+    FACE_ACTIONS[1],
+    ...Array.from({ length: 4 }, () => FACE_ACTIONS[random(4)]!),
+  ];
+  for (let i = actions.length - 1; i > 0; i--) {
+    const j = random(i + 1);
+    [actions[i], actions[j]] = [actions[j]!, actions[i]!];
+  }
+  const faces: DieFace[] = actions.map((action, index) => {
+    const [min, max] = facetingRange(level, action);
+    return { face: index + 1, action, value: min + random(max - min + 1) };
+  });
+  const die: CombatDie = {
+    id,
+    contentVersion: 0,
+    baseType: DIE_BASES[random(DIE_BASES.length)]!,
+    ilvl: level,
+    quality: 0,
+    rarity: 'UNIQUE',
+    faces,
+    affixes: rollAffixes(level, 4, [], random),
+    powerScore: 0,
+  };
+  die.powerScore = evaluateDiePowerScore(die);
+  return parseCombatDie(die);
+}

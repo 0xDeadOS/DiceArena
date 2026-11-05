@@ -34,6 +34,14 @@ const noRandom = () => {
 };
 const magic = () => craftDie(die, 'CASTING', () => 0);
 const rare = () => craftDie(magic(), 'ASCENDANCE', (max) => max - 1);
+/** Валидный уникальный кубик: 20-й уровень открывает третий тир, набор свойств 2+2. */
+const unique = (): CombatDie =>
+  parseCombatDie({
+    ...die,
+    ilvl: 20,
+    rarity: 'UNIQUE',
+    affixes: rollAffixes(20, 4, [], () => 0),
+  });
 const asItem = (data: CombatDie, extra: Partial<DieDTO> = {}): DieDTO => ({
   ...data,
   contentVersion: data.contentVersion ?? 0,
@@ -120,7 +128,9 @@ describe('six-sphere crafting', () => {
   });
   it.each(SPHERE_TYPES)('rejects protected/unique loadouts for %s before RNG', (sphere) => {
     expect(() => craftDie({ ...die, isLocked: true }, sphere, noRandom)).toThrow();
-    expect(() => craftDie({ ...die, rarity: 'UNIQUE' }, sphere, noRandom)).toThrow();
+    // Уникальный кубик нельзя перековать ни в одной сфере, кроме закалки качества.
+    if (sphere === 'TEMPERING') expect(craftDie(unique(), sphere, noRandom).quality).toBe(5);
+    else expect(() => craftDie(unique(), sphere, noRandom)).toThrow();
   });
   it('rejects incompatible rarity and no-op cleansing; destructive recipes are explicit', () => {
     for (const sphere of ['ASCENDANCE', 'RESHAPING', 'CLEANSING'] as const)
@@ -230,9 +240,7 @@ describe('master faceting for dust', () => {
     expect(masterFacetRejection(die, 2.5, 'STRIKE')?.code).toBe('INVALID_FACE');
     expect(masterFacetRejection(die, 2, 'BLOCK' as never)?.code).toBe('INVALID_ACTION');
     expect(masterFacetRejection({ ...die, isLocked: true }, 2, 'STRIKE')?.code).toBe('DIE_LOCKED');
-    expect(masterFacetRejection({ ...die, rarity: 'UNIQUE' }, 2, 'STRIKE')?.code).toBe(
-      'UNSUPPORTED_DIE',
-    );
+    expect(masterFacetRejection(unique(), 2, 'STRIKE')).toBeNull();
   });
   it('rewrites only the chosen face, keeps the value inside the published range', () => {
     const before = parseCombatDie(die);
@@ -257,7 +265,9 @@ describe('master faceting for dust', () => {
   });
   it('refuses locked, unique and invalid cuts without touching the die', () => {
     expect(() => masterFacetDie({ ...die, isLocked: true }, 1, 'STRIKE', noRandom)).toThrow();
-    expect(() => masterFacetDie({ ...die, rarity: 'UNIQUE' }, 1, 'STRIKE', noRandom)).toThrow();
+    // Огранка доступна и уникальному кубику: редкость и свойства сохраняются.
+    expect(masterFacetDie(unique(), 1, 'STRIKE', () => 0).rarity).toBe('UNIQUE');
+    expect(masterFacetDie(unique(), 1, 'STRIKE', () => 0).affixes).toEqual(unique().affixes);
     expect(() => masterFacetDie(die, 9, 'STRIKE', noRandom)).toThrow();
     expect(() => masterFacetDie(die, 1, 'BLOCK' as never, noRandom)).toThrow();
   });

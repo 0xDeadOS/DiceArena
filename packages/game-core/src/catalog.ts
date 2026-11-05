@@ -92,11 +92,13 @@ export const combatDieSchema = z
       invalid('Duplicate affix');
     for (const kind of ['PREFIX', 'SUFFIX'])
       if (die.affixes.filter((a) => a.kind === kind).length > 2) invalid('Affix kind limit');
-    if (die.rarity === 'UNIQUE') invalid('Unique loadouts are not supported yet');
     if (die.rarity === 'NORMAL' && die.affixes.length !== 0) invalid('Normal die has affixes');
     if (die.rarity === 'MAGIC' && (die.affixes.length < 1 || die.affixes.length > 2))
       invalid('Magic affix count');
     if (die.rarity === 'RARE' && die.affixes.length < 3) invalid('Rare affix count');
+    // Уникальный кубик — вершина редкости: всегда ровно 2+2 свойства, поэтому предел
+    // набора (4) достигается только им. Проверка избыточна с общей, но фиксирует намерение.
+    if (die.rarity === 'UNIQUE' && die.affixes.length !== 4) invalid('Unique affix count');
     for (const affix of die.affixes) {
       const definition = Object.hasOwn(AFFIXES, affix.id) ? AFFIXES[affix.id] : undefined;
       const range = definition?.ranges[affix.tier - 1];

@@ -137,10 +137,17 @@ export interface RaidDTO {
     totalDamage: number;
     contributions: RaidContributionDTO[];
     attack: RaidAttackDTO | null;
+    /** Трофей рейда — единственный источник редкости UNIQUE. */
+    trophy: {
+      /** Трофей ещё не забран; забрать может только самый результативный участник. */
+      available: boolean;
+      claimedByMe: boolean;
+    };
   } | null;
   canContribute: ItemPermission;
   canSummon: ItemPermission;
   canAttack: ItemPermission;
+  canClaimTrophy: ItemPermission;
 }
 export interface RaidAttackDTO {
   id: string;

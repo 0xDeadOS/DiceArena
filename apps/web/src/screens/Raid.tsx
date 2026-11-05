@@ -104,11 +104,17 @@ function RaidPanel({
   raid: RaidDTO;
   busy: boolean;
   submit: (
-    path: '/api/raid/contribute' | '/api/raid/summon' | '/api/raid/attack' | '/api/raid/decide',
+    path:
+      | '/api/raid/contribute'
+      | '/api/raid/summon'
+      | '/api/raid/attack'
+      | '/api/raid/decide'
+      | '/api/raid/claim-trophy',
     body: Record<string, unknown>,
   ) => Promise<void>;
 }) {
   const [confirmSummon, setConfirmSummon] = useState(false);
+  const [confirmTrophy, setConfirmTrophy] = useState(false);
   const active = raid.raid;
   return (
     <div className="raid-body">
@@ -311,6 +317,53 @@ function RaidPanel({
             Рейд не призван. Соберите {raid.altar.target} фрагментов в алтаре — и Обитель сможет
             вызвать босса на 48 часов.
           </p>
+        </section>
+      )}
+
+      {active && active.status === 'DEFEATED' && (
+        <section className="panel trophy-panel">
+          <h2>
+            <Trophy size={16} /> Трофей рейда
+          </h2>
+          {active.trophy.claimedByMe ? (
+            <p className="panel-hint">
+              Уникальный кубик уже в вашей сумке. Его нельзя распылить или перековать — доступна
+              только закалка и огранка граней.
+            </p>
+          ) : (
+            <>
+              <p className="panel-hint">
+                Уникальный кубик с четырьмя свойствами достаётся самому результативному участнику
+                рейда.
+              </p>
+              <div className="panel-actions">
+                <button
+                  className="primary-button"
+                  disabled={busy || !raid.canClaimTrophy.allowed}
+                  onClick={() => {
+                    if (!confirmTrophy) {
+                      setConfirmTrophy(true);
+                      return;
+                    }
+                    void submit('/api/raid/claim-trophy', {
+                      raidId: active.id,
+                      expectedRevision: active.revision,
+                      confirmed: true,
+                    });
+                    setConfirmTrophy(false);
+                  }}
+                >
+                  <Trophy size={15} />
+                  {confirmTrophy ? 'Подтвердите получение' : 'Забрать трофей'}
+                </button>
+              </div>
+              {!raid.canClaimTrophy.allowed && raid.canClaimTrophy.reason && (
+                <p className="panel-hint muted">
+                  <LockKeyhole size={13} /> {raid.canClaimTrophy.reason}
+                </p>
+              )}
+            </>
+          )}
         </section>
       )}
 

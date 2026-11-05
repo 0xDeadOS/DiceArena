@@ -73,6 +73,15 @@ export function raidRoutes(
         action: { type: 'string', enum: ['DIRECT', 'SHIFT', 'REROLL'] },
       },
     },
+    {
+      path: '/api/raid/claim-trophy',
+      type: 'CLAIM_TROPHY',
+      properties: {
+        raidId: { type: 'string', format: 'uuid' },
+        expectedRevision: revision,
+        confirmed,
+      },
+    },
   ] as const;
   for (const { path, type, properties } of routes)
     app.post<{ Body: Record<string, unknown>; Reply: RaidDTO }>(

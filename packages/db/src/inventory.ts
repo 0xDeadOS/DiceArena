@@ -104,11 +104,8 @@ export class PrismaInventoryRepository implements InventoryRepository {
         switch (command.type) {
           case 'EQUIP':
             requireRule(!before.isEquipped, 'ALREADY_EQUIPPED', 'Этот кубик уже в руке.');
-            requireRule(
-              item.rarity !== 'UNIQUE',
-              'UNSUPPORTED_DIE',
-              'Уникальные кубики пока не поддерживаются в бою.',
-            );
+            // Уникальный кубик — полноценное боевое снаряжение: его редкость лишь
+            // запрещает перековку и распыление, но не бой.
             parseCombatDie(item);
             await tx.roomMember.update({
               where: { id: member.id },
@@ -393,12 +390,8 @@ export class PrismaInventoryRepository implements InventoryRepository {
       policies: hub.inventory.dice.map((die) => ({
         dieId: die.id,
         equip: {
-          allowed: !die.isEquipped && die.rarity !== 'UNIQUE',
-          reason: die.isEquipped
-            ? 'Уже в руке.'
-            : die.rarity === 'UNIQUE'
-              ? 'Уникальные кубики пока не поддерживаются.'
-              : null,
+          allowed: !die.isEquipped,
+          reason: die.isEquipped ? 'Уже в руке.' : null,
         },
         dismantle: { ...dismantlePermission(die, activeRunDieId), dust: dismantleDust(die.rarity) },
         masterFacet: (() => {

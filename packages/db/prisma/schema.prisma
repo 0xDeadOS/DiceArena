@@ -225,6 +225,9 @@ model RaidInstance {
   phase        Int          @default(1)
   revision     Int          @default(0)
   status       RaidStatus   @default(ACTIVE)
+  // Секретное зерно трофея появляется при победе; до этого момента его нет.
+  trophySeed   String?      @db.Char(64)
+  claimedBy    String?      @db.Uuid
   createdAt    DateTime     @default(now()) @db.Timestamptz(3)
   expiresAt    DateTime     @db.Timestamptz(3)
   defeatedAt   DateTime?    @db.Timestamptz(3)

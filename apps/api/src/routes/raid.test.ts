@@ -102,6 +102,11 @@ describe('Рейд Обители на границе HTTP', () => {
       { raidId, attackId, expectedRevision: 4, action: 'DIRECT' },
       { raidId, attackId, expectedRevision: 4, action: 'DIRECT', type: 'DECIDE' },
     ],
+    [
+      '/api/raid/claim-trophy',
+      { raidId, expectedRevision: 4, confirmed: true },
+      { raidId, expectedRevision: 4, confirmed: true, type: 'CLAIM_TROPHY' },
+    ],
   ])('принимает %s и передаёт команду в хранилище', async (path, body, command) => {
     const { app, raid } = await setup();
     const key = randomUUID();
@@ -133,6 +138,9 @@ describe('Рейд Обители на границе HTTP', () => {
     ['/api/raid/decide', { raidId, attackId, expectedRevision: 0, action: 'FLIP' }],
     ['/api/raid/decide', { raidId, attackId, expectedRevision: 0 }],
     ['/api/raid/decide', { raidId, attackId, expectedRevision: 0, action: 'DIRECT', extra: 1 }],
+    ['/api/raid/claim-trophy', { raidId, expectedRevision: 0 }],
+    ['/api/raid/claim-trophy', { raidId: 'не-uuid', expectedRevision: 0, confirmed: true }],
+    ['/api/raid/claim-trophy', { raidId, expectedRevision: 0, confirmed: false }],
   ])('отклоняет невалидное тело %s', async (path, body) => {
     const { app, raid } = await setup();
     const response = await app.inject({

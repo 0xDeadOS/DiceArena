@@ -54,7 +54,14 @@ describe('combat loadouts', () => {
     expect(
       combatDieSchema.safeParse({ ...die, faces: die.faces.map(() => die.faces[0]) }).success,
     ).toBe(false);
+    // Уникальный кубик допустим, но только с максимальным набором свойств (2+2).
     expect(combatDieSchema.safeParse({ ...die, rarity: 'UNIQUE' }).success).toBe(false);
+    expect(
+      combatDieSchema.safeParse({ ...affixed('P1', 'P2', 'S1', 'S2'), rarity: 'UNIQUE' }).success,
+    ).toBe(true);
+    expect(combatDieSchema.safeParse({ ...affixed('P1', 'S1'), rarity: 'UNIQUE' }).success).toBe(
+      false,
+    );
     expect(combatDieSchema.safeParse({ ...die, affixes: affixed('P1').affixes }).success).toBe(
       false,
     );

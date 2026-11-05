@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import {
+  INVENTORY_CAPACITY,
   RAID_ROUNDS,
   SEAL_TARGET,
   facePlay,
@@ -11,6 +13,8 @@ import {
   raidRoundHp,
   raidShield,
   raidStrike,
+  raidTrophyLevel,
+  generateRaidTrophy,
   rankingWindowStart,
   RANKING_WINDOW_DAYS,
   requireRule,
@@ -31,7 +35,7 @@ import type {
   RaidInstance,
   RoomMember,
 } from './generated/prisma/client.js';
-import { lockMember, memberCommand } from './transactions.js';
+import { json, lockMember, memberCommand } from './transactions.js';
 import { toDieDTO } from './profiles.js';
 import type { Tx } from './transactions.js';
 import { enqueueAnnouncement } from './events.js';
@@ -47,7 +51,8 @@ export type RaidCommand =
       attackId: string;
       expectedRevision: number;
       action: 'DIRECT' | 'SHIFT' | 'REROLL';
-    };
+    }
+  | { type: 'CLAIM_TROPHY'; raidId: string; expectedRevision: number; confirmed: true };
 
 export interface RaidRepository {
   current(room: RoomContext, identity: TelegramIdentity, now: Date): Promise<RaidDTO>;
@@ -145,6 +150,7 @@ export class PrismaRaidRepository implements RaidRepository {
         if (command.type === 'CONTRIBUTE') return this.contribute(tx, member, command, now);
         if (command.type === 'SUMMON') return this.summon(tx, member, command, now);
         if (command.type === 'ATTACK') return this.attack(tx, member, command, now);
+        if (command.type === 'CLAIM_TROPHY') return this.claimTrophy(tx, member, command, now);
         return this.decide(tx, member, command, now);
       },
     );
@@ -383,6 +389,12 @@ export class PrismaRaidRepository implements RaidRepository {
           inventoryRevision: { increment: 1 },
         },
       });
+    // Зерно трофея закладывается при победе: сам трофей выводится из него позже,
+    // поэтому его нельзя ни подсмотреть, ни перебросить после объявления вклада.
+    await tx.raidInstance.update({
+      where: { id: raid.id },
+      data: { trophySeed: newSecretSeed() },
+    });
     const total = participants.reduce((sum, entry) => sum + entry.damage, 0);
     await enqueueAnnouncement(tx, {
       id: roomId,
@@ -397,6 +409,81 @@ export class PrismaRaidRepository implements RaidRepository {
         participants: participants.length,
       },
     });
+  }
+
+  /**
+   * Трофей рейда — единственный источник `UNIQUE`. Он выдаётся тому, кто нанёс больше
+   * всех урона, и только один раз на рейд: зерно закладывается при победе, а сам предмет
+   * выводится из него детерминированно, поэтому повторный запрос не создаст второй кубик
+   * и не изменит уже выданный.
+   */
+  private async claimTrophy(
+    tx: Tx,
+    member: RoomMember,
+    command: Extract<RaidCommand, { type: 'CLAIM_TROPHY' }>,
+    now: Date,
+  ) {
+    requireRule(
+      command.confirmed === true,
+      'CONFIRMATION_REQUIRED',
+      'Подтвердите получение трофея.',
+    );
+    const raid = await this.lockRaid(tx, command.raidId, member.roomId, command.expectedRevision);
+    requireRule(raid.status === 'DEFEATED', 'RAID_NOT_DEFEATED', 'Рейд ещё не побеждён.');
+    requireRule(raid.trophySeed !== null, 'TROPHY_MISSING', 'У этого рейда нет трофея.');
+    requireRule(raid.claimedBy === null, 'TROPHY_CLAIMED', 'Трофей уже получен.');
+    const grouped = await tx.raidAttack.groupBy({
+      by: ['memberId'],
+      where: { raidId: raid.id, state: 'FINISHED' },
+      _sum: { damageDealt: true },
+    });
+    const scored = grouped
+      .map((row) => ({ memberId: row.memberId, damage: row._sum.damageDealt ?? 0 }))
+      .filter((row) => row.damage > 0);
+    requireRule(scored.length > 0, 'NO_RAID_PARTICIPANTS', 'В рейде нет участников с уроном.');
+    const best = scored.reduce((top, entry) => (entry.damage > top.damage ? entry : top));
+    requireRule(
+      best.memberId === member.id,
+      'TROPHY_NOT_YOURS',
+      'Трофей достаётся самому результативному участнику рейда.',
+    );
+    const room = await tx.room.findUniqueOrThrow({
+      where: { id: member.roomId },
+      include: { members: { select: { highestExpeditionLevel: true } } },
+    });
+    const highest = Math.max(0, ...room.members.map((m) => m.highestExpeditionLevel));
+    let step = 0;
+    const trophy = generateRaidTrophy(randomUUID(), raidTrophyLevel(highest), (max) =>
+      secretInt(raid.trophySeed!, 'trophy', step++, max),
+    );
+    requireRule(
+      (await tx.die.count({ where: { ownerId: member.id } })) < INVENTORY_CAPACITY,
+      'INVENTORY_FULL',
+      'В сумке нет свободного слота для трофея.',
+    );
+    await tx.die.create({
+      data: {
+        id: trophy.id,
+        ownerId: member.id,
+        baseType: trophy.baseType,
+        ilvl: trophy.ilvl,
+        quality: trophy.quality,
+        rarity: trophy.rarity,
+        faces: json(trophy.faces),
+        affixes: json(trophy.affixes),
+        powerScore: trophy.powerScore,
+        contentVersion: trophy.contentVersion ?? 0,
+      },
+    });
+    await tx.raidInstance.update({
+      where: { id: raid.id },
+      data: { claimedBy: member.id, revision: { increment: 1 } },
+    });
+    await tx.roomMember.update({
+      where: { id: member.id },
+      data: { inventoryRevision: { increment: 1 } },
+    });
+    return this.read(tx, member, now);
   }
 
   private async lockRaid(
@@ -460,6 +547,22 @@ export class PrismaRaidRepository implements RaidRepository {
     const loadout = member.equippedDieId
       ? parseCombatDie(await tx.die.findUniqueOrThrow({ where: { id: member.equippedDieId } }))
       : null;
+    // Трофей достаётся самому результативному участнику; его право видно в состоянии рейда.
+    let trophyBest: { memberId: string; damage: number } | null = null;
+    if (raid?.trophySeed) {
+      const scored = (
+        await tx.raidAttack.groupBy({
+          by: ['memberId'],
+          where: { raidId: raid.id, state: 'FINISHED' },
+          _sum: { damageDealt: true },
+        })
+      )
+        .map((row) => ({ memberId: row.memberId, damage: row._sum.damageDealt ?? 0 }))
+        .filter((row) => row.damage > 0);
+      trophyBest = scored.length
+        ? scored.reduce((top, entry) => (entry.damage > top.damage ? entry : top))
+        : null;
+    }
     return {
       altar: { ...altar, target: SEAL_TARGET },
       myFragments: member.sealFragments,
@@ -487,6 +590,10 @@ export class PrismaRaidRepository implements RaidRepository {
             totalDamage: contributions.reduce((sum, entry) => sum + entry.damage, 0),
             contributions,
             attack: open ? attackDTO(open, loadout) : null,
+            trophy: {
+              available: raid.trophySeed !== null && raid.claimedBy === null,
+              claimedByMe: raid.claimedBy === member.id,
+            },
           }
         : null,
       canContribute: permission(
@@ -506,6 +613,14 @@ export class PrismaRaidRepository implements RaidRepository {
           : hornsLeft(usedToday) === 0
             ? 'Сегодня рога уже потрачены.'
             : 'Сначала экипируйте кубик.',
+      ),
+      canClaimTrophy: permission(
+        Boolean(raid?.trophySeed) && raid?.claimedBy === null && trophyBest?.memberId === member.id,
+        !raid?.trophySeed
+          ? 'Трофей появляется после победы над боссом.'
+          : raid.claimedBy !== null
+            ? 'Трофей уже получен.'
+            : 'Трофей достаётся самому результативному участнику рейда.',
       ),
     };
   }

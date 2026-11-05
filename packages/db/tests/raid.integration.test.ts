@@ -33,6 +33,60 @@ describe('Рейд Обители', () => {
     return raid({ type: 'SUMMON', expectedRevision: 0, confirmed: true });
   };
 
+  /**
+   * Стартовый кубик содержит грань HEAL, которая не наносит урона рейду и тратит рог
+   * впустую: шести рогов соло-Обители на шесть раундов тогда не хватает. Это часть
+   * баланса и проверяется отдельно, поэтому здесь снаряд приводится к боевому —
+   * как фикстура ускорения в тестах экспедиций, а не подмена правил.
+   */
+  const equipCombatDie = () =>
+    h.db.die.updateMany({
+      where: { ownerId: memberId },
+      data: {
+        faces: Array.from({ length: 6 }, (_, index) => ({
+          face: index + 1,
+          action: 'STRIKE',
+          value: 9,
+        })),
+      },
+    });
+
+  /** Доводит рейд до победы, растягивая удары по суткам UTC внутри окна 48 часов. */
+  const defeatRaid = async () => {
+    await equipCombatDie();
+    const summoned = await summon();
+    const raidId = summoned.raid!.id;
+    let state = summoned;
+    let day = NOW;
+    let hornsToday = DAILY_HORNS;
+    for (let attack = 0; attack < RAID_ROUNDS + 2 && state.raid!.status === 'ACTIVE'; attack++) {
+      if (hornsToday === 0) {
+        day = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1, 9));
+        hornsToday = DAILY_HORNS;
+      }
+      if (!state.raid!.attack) {
+        state = await raid(
+          { type: 'ATTACK', raidId, expectedRevision: state.raid!.revision },
+          randomUUID(),
+          day,
+        );
+        hornsToday--;
+      }
+      state = await raid(
+        {
+          type: 'DECIDE',
+          raidId,
+          attackId: state.raid!.attack!.id,
+          expectedRevision: state.raid!.revision,
+          action: 'DIRECT',
+        },
+        randomUUID(),
+        day,
+      );
+    }
+    return state;
+  };
+
   beforeAll(async () => {
     h = await databaseHarness();
   });
@@ -116,58 +170,11 @@ describe('Рейд Обители', () => {
   });
 
   it('проходит все шесть раундов до победы и делит награду по доле урона', async () => {
-    // Стартовый кубик содержит грань HEAL, которая не наносит урона рейду и тратит рог
-    // впустую: шести рогов соло-Обители на шесть раундов тогда не хватает. Это часть
-    // баланса и проверяется отдельно, поэтому здесь снаряд приводится к боевому —
-    // как фикстура ускорения в тестах экспедиций, а не подмена правил.
-    await h.db.die.updateMany({
-      where: { ownerId: memberId },
-      data: {
-        faces: [
-          { face: 1, action: 'STRIKE', value: 9 },
-          { face: 2, action: 'STRIKE', value: 9 },
-          { face: 3, action: 'STRIKE', value: 9 },
-          { face: 4, action: 'STRIKE', value: 9 },
-          { face: 5, action: 'STRIKE', value: 9 },
-          { face: 6, action: 'STRIKE', value: 9 },
-        ],
-      },
-    });
-    const summoned = await summon();
-    const raidId = summoned.raid!.id;
     const goldBefore = (await h.db.roomMember.findUniqueOrThrow({ where: { id: memberId } })).gold;
     const dustBefore = (await h.db.roomMember.findUniqueOrThrow({ where: { id: memberId } }))
       .facetDust;
-    let state = summoned;
-    // Рога восстанавливаются по суткам UTC, поэтому бой растягивается на несколько дней.
-    // Окно рейда — 48 часов: держимся внутри него и переносим «сегодня».
-    let day = NOW;
-    let hornsToday = DAILY_HORNS;
-    for (let attack = 0; attack < RAID_ROUNDS + 2 && state.raid!.status === 'ACTIVE'; attack++) {
-      if (hornsToday === 0) {
-        day = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1, 9));
-        hornsToday = DAILY_HORNS;
-      }
-      if (!state.raid!.attack) {
-        state = await raid(
-          { type: 'ATTACK', raidId, expectedRevision: state.raid!.revision },
-          randomUUID(),
-          day,
-        );
-        hornsToday--;
-      }
-      state = await raid(
-        {
-          type: 'DECIDE',
-          raidId,
-          attackId: state.raid!.attack!.id,
-          expectedRevision: state.raid!.revision,
-          action: 'DIRECT',
-        },
-        randomUUID(),
-        day,
-      );
-    }
+    const state = await defeatRaid();
+    const raidId = state.raid!.id;
     expect(state.raid!.status).toBe('DEFEATED');
     expect(state.raid!.currentHp).toBe(0);
     expect(state.raid!.defeatedAt).not.toBeNull();
@@ -383,6 +390,59 @@ describe('Рейд Обители', () => {
     ).rejects.toMatchObject({ code: 'NO_EQUIPPED_DIE' });
     const view = await h.raid.current(room, alice, NOW);
     expect(view.canAttack).toMatchObject({ allowed: false });
+  });
+
+  it('выдаёт уникальный трофей победителю ровно один раз', async () => {
+    const state = await defeatRaid();
+    const raidId = state.raid!.id;
+    const revision = state.raid!.revision;
+    // До получения трофей виден в состоянии рейда.
+    expect(state.raid!.status).toBe('DEFEATED');
+    const diceBefore = await h.db.die.count({ where: { ownerId: memberId } });
+
+    const claimKey = randomUUID();
+    const claim = {
+      type: 'CLAIM_TROPHY' as const,
+      raidId,
+      expectedRevision: revision,
+      confirmed: true as const,
+    };
+    const claimed = await raid(claim, claimKey);
+    const dice = await h.db.die.findMany({
+      where: { ownerId: memberId, rarity: 'UNIQUE' },
+    });
+    expect(dice).toHaveLength(1);
+    const trophy = dice[0]!;
+    expect(trophy.affixes).toHaveLength(4);
+    expect(trophy.ilvl).toBeGreaterThanOrEqual(20);
+    expect(trophy.ilvl).toBeLessThanOrEqual(50);
+    expect(trophy.powerScore).toBeGreaterThan(0);
+    expect(await h.db.die.count({ where: { ownerId: memberId } })).toBe(diceBefore + 1);
+
+    // Повтор по тому же ключу возвращает сохранённый ответ, а не вторую награду.
+    await expect(raid(claim, claimKey)).resolves.toEqual(claimed);
+
+    // Новый ключ отклоняется: трофей уже получен. Ревизия рейда выросла при выдаче.
+    await expect(
+      raid({ ...claim, expectedRevision: claimed.raid!.revision }, randomUUID()),
+    ).rejects.toMatchObject({ code: 'TROPHY_CLAIMED' });
+    expect(await h.db.die.count({ where: { ownerId: memberId, rarity: 'UNIQUE' } })).toBe(1);
+  });
+
+  it('не выдаёт трофей до победы и не отдаёт его чужому участнику', async () => {
+    await grantFragments(SEAL_TARGET);
+    for (let index = 0; index < SEAL_TARGET; index++)
+      await raid({ type: 'CONTRIBUTE', fragments: 1, expectedRevision: 0, confirmed: true });
+    const summoned = await raid({ type: 'SUMMON', expectedRevision: 0, confirmed: true });
+    await expect(
+      raid({
+        type: 'CLAIM_TROPHY',
+        raidId: summoned.raid!.id,
+        expectedRevision: summoned.raid!.revision,
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'RAID_NOT_DEFEATED' });
+    expect(await h.db.die.count({ where: { rarity: 'UNIQUE' } })).toBe(0);
   });
 
   it('считает рейтинг семи дней только по победным кубикам Обители', async () => {

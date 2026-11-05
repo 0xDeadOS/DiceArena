@@ -21,7 +21,8 @@ export type RaidPath =
   | '/api/raid/contribute'
   | '/api/raid/summon'
   | '/api/raid/attack'
-  | '/api/raid/decide';
+  | '/api/raid/decide'
+  | '/api/raid/claim-trophy';
 
 export type ApiPath =
   | GamePath

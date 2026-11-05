@@ -128,8 +128,13 @@ export function craftRejection(
   if (!SPHERE_TYPES.includes(sphere))
     return { code: 'INVALID_SPHERE', message: 'Неизвестная сфера.' };
   if (die.isLocked) return { code: 'DIE_LOCKED', message: 'Сначала снимите защиту кубика.' };
-  if (die.rarity === 'UNIQUE')
-    return { code: 'UNSUPPORTED_DIE', message: 'Уникальные кубики пока нельзя изменять.' };
+  // Уникальный кубик — конечная точка развития: его редкость и набор свойств нельзя
+  // переплавить, но качество и огранка граней остаются доступными.
+  if (die.rarity === 'UNIQUE' && sphere !== 'TEMPERING')
+    return {
+      code: 'DIE_UNIQUE',
+      message: 'Уникальный кубик нельзя перековать: доступна только закалка.',
+    };
   if (sphere === 'TEMPERING' && die.quality >= 20)
     return { code: 'QUALITY_MAXIMUM', message: 'Качество уже достигло 20%.' };
   if (sphere === 'CASTING' && !['NORMAL', 'MAGIC'].includes(die.rarity))
@@ -219,8 +224,6 @@ export function masterFacetRejection(
   if (!FACE_ACTIONS.includes(action))
     return { code: 'INVALID_ACTION', message: 'Неизвестное действие грани.' };
   if (die.isLocked) return { code: 'DIE_LOCKED', message: 'Сначала снимите защиту кубика.' };
-  if (die.rarity === 'UNIQUE')
-    return { code: 'UNSUPPORTED_DIE', message: 'Уникальные кубики пока нельзя изменять.' };
   return null;
 }
 /** Never awards a free preview: the value is drawn inside the published faceting range. */
@@ -260,7 +263,7 @@ export function dismantlePermission(
         : die.id === activeRunDieId
           ? 'Кубик используется в незавершённом походе.'
           : die.rarity === 'UNIQUE'
-            ? 'Уникальные кубики пока нельзя распылять.'
+            ? 'Уникальный кубик нельзя распылить.'
             : null;
   return { allowed: reason === null, reason };
 }

@@ -5080,3 +5080,12 @@ button svg {
 .panel-hint.muted {
   opacity: 0.75;
 }
+
+/* ── Трофей рейда ── */
+.trophy-panel {
+  border-color: #d6be7840;
+  background: radial-gradient(120% 100% at 0% 0%, #d6be7814, transparent 60%), var(--panel);
+}
+.trophy-panel h2 {
+  color: var(--gold);
+}

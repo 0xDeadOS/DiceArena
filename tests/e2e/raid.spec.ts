@@ -133,4 +133,76 @@ test.describe('Рейд Обители', () => {
       .click();
     await expect(page.locator('.raid-warning')).toContainText('Рейд изменился.');
   });
+
+  test('показывает трофей победителю и требует подтверждения', async ({ page }) => {
+    let calls = 0;
+    const defeated: RaidDTO = {
+      ...fixtureRaid(),
+      raid: {
+        ...fixtureRaid()!.raid!,
+        status: 'DEFEATED',
+        phase: 6,
+        currentHp: 0,
+        defeatedAt: '2026-11-05T10:00:00.000Z',
+        trophy: { available: true, claimedByMe: false },
+      },
+      canAttack: { allowed: false, reason: 'Рейд завершён.' },
+      canClaimTrophy: { allowed: true, reason: null },
+    };
+    const hub = fixtureHub();
+    await authenticatedPage(page, hub);
+    await page.route('**/api/raid', (route) => route.fulfill({ json: defeated }));
+    // Трофей выдаётся отдельным маршрутом; после выдачи снимок меняется.
+    await page.route('**/api/raid/claim-trophy', (route) => {
+      calls += 1;
+      return route.fulfill({
+        json: {
+          ...defeated,
+          raid: { ...defeated.raid!, trophy: { available: false, claimedByMe: true } },
+        },
+      });
+    });
+    await page.route('**/api/leaderboard', (route) =>
+      route.fulfill({ json: fixtureLeaderboard() }),
+    );
+    await page.goto('/');
+    await page
+      .getByRole('button', { name: /Рейд Обители/i })
+      .first()
+      .click();
+    await expect(page.getByRole('heading', { name: /Трофей рейда/i })).toBeVisible();
+
+    // Первый клик только подтверждает намерение, запрос не уходит.
+    await page.getByRole('button', { name: /Забрать трофей/ }).click();
+    expect(calls).toBe(0);
+    await expect(page.getByRole('button', { name: /Подтвердите получение/ })).toBeVisible();
+    await page.getByRole('button', { name: /Подтвердите получение/ }).click();
+    await expect.poll(() => calls).toBe(1);
+    await expect(page.getByText(/Уникальный кубик уже в вашей сумке/)).toBeVisible();
+  });
+
+  test('объясняет, почему трофей недоступен чужому участнику', async ({ page }) => {
+    const defeated: RaidDTO = {
+      ...fixtureRaid(),
+      raid: {
+        ...fixtureRaid()!.raid!,
+        status: 'DEFEATED',
+        phase: 6,
+        currentHp: 0,
+        defeatedAt: '2026-11-05T10:00:00.000Z',
+        trophy: { available: true, claimedByMe: false },
+      },
+      canAttack: { allowed: false, reason: 'Рейд завершён.' },
+      canClaimTrophy: {
+        allowed: false,
+        reason: 'Трофей достаётся самому результативному участнику рейда.',
+      },
+    };
+    await raidPage(page, { raid: defeated });
+    const button = page.getByRole('button', { name: /Забрать трофей/ });
+    await expect(button).toBeDisabled();
+    await expect(
+      page.getByText(/Трофей достаётся самому результативному участнику рейда/),
+    ).toBeVisible();
+  });
 });

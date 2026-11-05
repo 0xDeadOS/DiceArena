@@ -131,10 +131,15 @@ export function fixtureRaid(): RaidDTO {
         faceValue: null,
         damageDealt: 0,
       },
+      trophy: { available: false, claimedByMe: false },
     },
     canContribute: { allowed: false, reason: 'Алтарь печати уже полон.' },
     canSummon: { allowed: false, reason: 'Рейд Обители уже идёт.' },
     canAttack: { allowed: true, reason: null },
+    canClaimTrophy: {
+      allowed: false,
+      reason: 'Трофей появляется после победы над боссом.',
+    },
   };
 }
 
