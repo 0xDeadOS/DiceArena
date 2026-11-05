@@ -7,3 +7,5 @@ export { Prisma } from './generated/prisma/client.js';
 export type { PrismaClient } from './generated/prisma/client.js';
 export { PrismaGameRepository } from './game.js';
 export type { GameRepository, GameCommand } from './game.js';
+export { PrismaInventoryRepository } from './inventory.js';
+export type { InventoryRepository, InventoryCommand } from './inventory.js';

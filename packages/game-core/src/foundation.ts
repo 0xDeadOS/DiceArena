@@ -56,8 +56,8 @@ export function effectiveFaceValue(
 
 /**
  * v2 ETV × 10, with synergy evaluated per opposing pair. No rarity multiplier.
- * Callers supply resolved face bonuses and passive EV explicitly. Automatic
- * passive-EV calibration is intentionally deferred until crafting/rating balance.
+ * Callers supply resolved face bonuses and passive EV explicitly. Workshop uses
+ * evaluateDiePowerScore for the documented provisional automatic utility model.
  */
 export function calculatePowerScore(
   faces: readonly DieFace[],

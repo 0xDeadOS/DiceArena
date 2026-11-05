@@ -129,4 +129,27 @@ describe('Mini App session lifetime', () => {
     expect(useSession.getState().hub).toEqual(hub);
     expect(request).toHaveBeenCalledTimes(2);
   });
+  it('never lets a delayed hub refresh roll back a committed inventory revision', async () => {
+    await enter();
+    let resolve!: (hub: HubDTO) => void;
+    request.mockReturnValueOnce(
+      new Promise<HubDTO>((r) => {
+        resolve = r;
+      }),
+    );
+    const flight = useSession.getState().refresh();
+    const newer = {
+      ...fixtureHub(),
+      player: { ...fixtureHub().player, inventoryRevision: 1, facetDust: 3 },
+    };
+    useSession.getState().acceptHub(newer);
+    resolve(fixtureHub());
+    await flight;
+    expect(useSession.getState().hub).toEqual(newer);
+    useSession.getState().acceptHub({
+      ...newer,
+      player: { ...newer.player, id: 'different-member', inventoryRevision: 10 },
+    });
+    expect(useSession.getState().hub).toEqual(newer);
+  });
 });

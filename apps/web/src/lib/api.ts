@@ -5,7 +5,18 @@ export type GamePath =
   | '/api/map/retreat'
   | '/api/battle/roll'
   | '/api/battle/decision';
-export type ApiPath = GamePath | '/api/map/current' | '/api/auth/session' | '/api/hub';
+export type InventoryPath =
+  | '/api/inventory/equip'
+  | '/api/inventory/lock'
+  | '/api/inventory/dismantle'
+  | '/api/workshop/craft';
+export type ApiPath =
+  | GamePath
+  | InventoryPath
+  | '/api/inventory'
+  | '/api/map/current'
+  | '/api/auth/session'
+  | '/api/hub';
 export interface Mutation {
   key: string;
   body: Record<string, unknown>;

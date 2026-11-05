@@ -38,7 +38,7 @@ export function Wallet({
           <Sparkles size={18} />
           {hub.player.facetDust} пыли граней
         </span>
-        <small>Пыль сохраняется для будущей Мастерской.</small>
+        <small>Пыль сохраняется для будущей точечной огранки.</small>
       </div>
       <div className="wallet-grid">
         {hub.inventory.spheres.map(({ type, amount }) => (
@@ -67,10 +67,10 @@ export function Wallet({
         <FlaskConical size={25} />
         <div>
           <h3>Алхимия любит терпеливых.</h3>
-          <p>Применение сфер и точная огранка появятся на третьем этапе.</p>
+          <p>Применяйте сферы в Мастерской. Перед изменением кубика потребуется подтверждение.</p>
         </div>
         <button className="button secondary" onClick={onWorkshop}>
-          О мастерской <ArrowUpRight size={15} />
+          В Мастерскую <ArrowUpRight size={15} />
         </button>
       </div>
     </div>

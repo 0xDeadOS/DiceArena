@@ -1,7 +1,12 @@
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { Api } from 'grammy';
-import { createDatabase, PrismaProfileRepository, PrismaGameRepository } from '@dicebound/db';
+import {
+  createDatabase,
+  PrismaProfileRepository,
+  PrismaGameRepository,
+  PrismaInventoryRepository,
+} from '@dicebound/db';
 import { buildApp } from './app.js';
 import { readConfig } from './config.js';
 import { TelegramMembershipChecker } from './auth/membership.js';
@@ -19,6 +24,7 @@ async function main() {
     botToken: config.BOT_TOKEN,
     profiles: new PrismaProfileRepository(db),
     game: new PrismaGameRepository(db),
+    inventory: new PrismaInventoryRepository(db),
     membership,
     maxInitDataAgeSeconds: config.INIT_DATA_MAX_AGE_SECONDS,
     logLevel: config.LOG_LEVEL,

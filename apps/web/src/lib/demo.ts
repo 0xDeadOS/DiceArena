@@ -16,6 +16,7 @@ export function demoHub(): HubDTO {
       username: null,
       gold: 150,
       facetDust: 0,
+      inventoryRevision: 0,
       sealFragments: 0,
       equippedDieId: 'demo-die',
       vigor: {
@@ -36,6 +37,15 @@ export function demoHub(): HubDTO {
       dice: [
         {
           id: 'demo-die',
+          contentVersion: 0,
+          effectiveFaces: [
+            { face: 1, action: 'STRIKE', value: 4 },
+            { face: 2, action: 'GUARD', value: 5 },
+            { face: 3, action: 'STRIKE', value: 6 },
+            { face: 4, action: 'PIERCE', value: 5 },
+            { face: 5, action: 'HEAL', value: 3 },
+            { face: 6, action: 'GUARD', value: 7 },
+          ],
           baseType: 'BONE',
           ilvl: 1,
           quality: 0,

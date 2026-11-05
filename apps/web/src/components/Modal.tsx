@@ -4,10 +4,12 @@ import { X } from 'lucide-react';
 
 export function Modal({
   title,
+  eyebrow = 'ПОЛЕВОЙ СПРАВОЧНИК',
   children,
   onClose,
 }: {
   title: string;
+  eyebrow?: string;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -38,7 +40,7 @@ export function Modal({
       <div className="modal-inner">
         <div className="modal-heading">
           <div>
-            <span className="eyebrow">ПОЛЕВОЙ СПРАВОЧНИК</span>
+            <span className="eyebrow">{eyebrow}</span>
             <h2 id={titleId}>{title}</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Закрыть">

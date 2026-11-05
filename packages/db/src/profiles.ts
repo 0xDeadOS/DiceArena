@@ -1,5 +1,6 @@
 import {
   calculatePowerScore,
+  facePlay,
   INVENTORY_CAPACITY,
   MAX_VIGOR,
   refreshVigor,
@@ -10,6 +11,7 @@ import {
 } from '@dicebound/game-core';
 import { FACE_ACTIONS, SPHERE_TYPES } from '@dicebound/shared-types';
 import type {
+  DieDTO,
   DieAffix,
   DieFace,
   FaceAction,
@@ -17,7 +19,7 @@ import type {
   RoomContext,
   TelegramIdentity,
 } from '@dicebound/shared-types';
-import type { Prisma, PrismaClient } from './generated/prisma/client.js';
+import type { Die, Prisma, PrismaClient } from './generated/prisma/client.js';
 
 export interface ProfileRepository {
   findRoom(slug: string): Promise<RoomContext | null>;
@@ -90,7 +92,7 @@ export class PrismaProfileRepository implements ProfileRepository {
         });
         await tx.roomMember.update({ where: { id: member.id }, data: { equippedDieId: die.id } });
       }
-      return this.readLockedHub(tx, member.id, now);
+      return readLockedHub(tx, member.id, now);
     });
   }
 
@@ -100,103 +102,91 @@ export class PrismaProfileRepository implements ProfileRepository {
         where: { roomId: room.id, user: { telegramUserId: BigInt(identity.id) } },
         select: { id: true },
       });
-      return member ? this.readLockedHub(tx, member.id, now) : null;
+      return member ? readLockedHub(tx, member.id, now) : null;
     });
   }
+}
 
-  private async readLockedHub(
-    tx: Prisma.TransactionClient,
-    memberId: string,
-    now: Date,
-  ): Promise<HubDTO> {
-    await tx.$queryRaw`SELECT id FROM "RoomMember" WHERE id = ${memberId}::uuid FOR UPDATE`;
-    const member = await tx.roomMember.findUniqueOrThrow({
-      where: { id: memberId },
-      include: {
-        user: true,
-        dice: { orderBy: { createdAt: 'asc' } },
-        currencies: true,
-        room: {
-          include: {
-            _count: { select: { members: true } },
-            raidInstances: {
-              where: { status: 'ACTIVE', expiresAt: { gt: now } },
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-              select: { id: true, bossName: true, currentHp: true, maxHp: true, expiresAt: true },
-            },
-          },
-        },
-        mapRuns: {
-          where: { status: 'IN_PROGRESS' },
-          take: 1,
-          select: {
-            id: true,
-            currentNodeId: true,
-            playerHp: true,
-            playerMaxHp: true,
-            hasVigorBoost: true,
-          },
-        },
-      },
-    });
-    const vigor = refreshVigor(member.storedVigor, member.vigorUpdatedAt, now);
-    if (vigor.updatedAt.getTime() !== member.vigorUpdatedAt.getTime()) {
-      await tx.roomMember.update({
-        where: { id: memberId },
-        data: { storedVigor: vigor.current, vigorUpdatedAt: vigor.updatedAt },
-      });
-    }
-    const raid = member.room.raidInstances[0];
-    // Explicit projection: no ORM record is returned directly to the client.
-    return {
+export async function readLockedHub(
+  tx: Prisma.TransactionClient,
+  memberId: string,
+  now: Date,
+): Promise<HubDTO> {
+  await tx.$queryRaw`SELECT id FROM "RoomMember" WHERE id = ${memberId}::uuid FOR UPDATE`;
+  const member = await tx.roomMember.findUniqueOrThrow({
+    where: { id: memberId },
+    include: {
+      user: true,
+      dice: { orderBy: { createdAt: 'asc' } },
+      currencies: true,
       room: {
-        id: member.room.id,
-        slug: member.room.slug,
-        title: member.room.title,
-        memberCount: member.room._count.members,
-        sealFragments: member.room.sealFragments,
-      },
-      player: {
-        id: member.id,
-        firstName: member.user.firstName,
-        username: member.user.username,
-        gold: member.gold,
-        facetDust: member.facetDust,
-        sealFragments: member.sealFragments,
-        equippedDieId: member.equippedDieId,
-        tutorialDone: member.tutorialDone,
-        vigor: {
-          current: vigor.current,
-          maximum: MAX_VIGOR,
-          nextRestoreAt: vigor.nextRestoreAt.toISOString(),
+        include: {
+          _count: { select: { members: true } },
+          raidInstances: {
+            where: { status: 'ACTIVE', expiresAt: { gt: now } },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { id: true, bossName: true, currentHp: true, maxHp: true, expiresAt: true },
+          },
         },
       },
-      inventory: {
-        capacity: INVENTORY_CAPACITY,
-        dice: member.dice.map((die) => ({
-          id: die.id,
-          baseType: die.baseType,
-          ilvl: die.ilvl,
-          quality: die.quality,
-          rarity: die.rarity,
-          faces: parseFaces(die.faces),
-          affixes: parseAffixes(die.affixes),
-          powerScore: die.powerScore,
-          isStarter: die.isStarter,
-          isLocked: die.isLocked,
-          isEquipped: member.equippedDieId === die.id,
-          masterCrafted: die.masterCrafted,
-        })),
-        spheres: SPHERE_TYPES.map((type) => ({
-          type,
-          amount: member.currencies.find((currency) => currency.sphereType === type)?.amount ?? 0,
-        })),
+      mapRuns: {
+        where: { status: 'IN_PROGRESS' },
+        take: 1,
+        select: {
+          id: true,
+          currentNodeId: true,
+          playerHp: true,
+          playerMaxHp: true,
+          hasVigorBoost: true,
+        },
       },
-      activeRun: member.mapRuns[0] ?? null,
-      raid: raid ? { ...raid, expiresAt: raid.expiresAt.toISOString() } : null,
-    };
+    },
+  });
+  const vigor = refreshVigor(member.storedVigor, member.vigorUpdatedAt, now);
+  if (vigor.updatedAt.getTime() !== member.vigorUpdatedAt.getTime()) {
+    await tx.roomMember.update({
+      where: { id: memberId },
+      data: { storedVigor: vigor.current, vigorUpdatedAt: vigor.updatedAt },
+    });
   }
+  const raid = member.room.raidInstances[0];
+  // Explicit projection: no ORM record is returned directly to the client.
+  return {
+    room: {
+      id: member.room.id,
+      slug: member.room.slug,
+      title: member.room.title,
+      memberCount: member.room._count.members,
+      sealFragments: member.room.sealFragments,
+    },
+    player: {
+      id: member.id,
+      firstName: member.user.firstName,
+      username: member.user.username,
+      gold: member.gold,
+      facetDust: member.facetDust,
+      inventoryRevision: member.inventoryRevision,
+      sealFragments: member.sealFragments,
+      equippedDieId: member.equippedDieId,
+      tutorialDone: member.tutorialDone,
+      vigor: {
+        current: vigor.current,
+        maximum: MAX_VIGOR,
+        nextRestoreAt: vigor.nextRestoreAt.toISOString(),
+      },
+    },
+    inventory: {
+      capacity: INVENTORY_CAPACITY,
+      dice: member.dice.map((die) => toDieDTO(die, member.equippedDieId)),
+      spheres: SPHERE_TYPES.map((type) => ({
+        type,
+        amount: member.currencies.find((currency) => currency.sphereType === type)?.amount ?? 0,
+      })),
+    },
+    activeRun: member.mapRuns[0] ?? null,
+    raid: raid ? { ...raid, expiresAt: raid.expiresAt.toISOString() } : null,
+  };
 }
 
 function isObject(value: Prisma.JsonValue): value is Prisma.JsonObject {
@@ -241,4 +231,26 @@ function parseAffixes(value: Prisma.JsonValue): DieAffix[] {
       throw new Error('Invalid stored affix');
     return { id: affix.id, kind: affix.kind, tier: affix.tier, value: affix.value };
   });
+}
+
+export function toDieDTO(die: Die, equippedDieId: string | null): DieDTO {
+  const item = {
+    id: die.id,
+    contentVersion: die.contentVersion,
+    baseType: die.baseType,
+    ilvl: die.ilvl,
+    quality: die.quality,
+    rarity: die.rarity,
+    faces: parseFaces(die.faces),
+    affixes: parseAffixes(die.affixes),
+    powerScore: die.powerScore,
+    isStarter: die.isStarter,
+    isLocked: die.isLocked,
+    isEquipped: die.id === equippedDieId,
+    masterCrafted: die.masterCrafted,
+  };
+  return {
+    ...item,
+    effectiveFaces: item.faces.map((f) => ({ ...f, value: facePlay(item, f.face).value })),
+  };
 }

@@ -118,3 +118,21 @@ export const SPHERES: Record<
       'Удаляет все аффиксы и делает кубик обычным. Грани и качество сохраняются. Перед применением потребуется подтверждение.',
   },
 };
+
+export const AFFIX_NAMES: Record<string, { name: string; percent?: boolean }> = {
+  P1: { name: 'Атака' },
+  P2: { name: 'Щит' },
+  P3: { name: 'Атака и укол', percent: true },
+  P4: { name: 'Сила щита', percent: true },
+  P5: { name: 'Шестая грань' },
+  P6: { name: 'Шипы при защите' },
+  P7: { name: 'Чётные грани' },
+  P8: { name: 'Пробой щита атакой' },
+  S1: { name: 'Вампиризм', percent: true },
+  S2: { name: 'Доп. перебросы' },
+  S3: { name: 'Начальная концентрация' },
+  S4: { name: 'Яд укола' },
+  S5: { name: 'Сохранение щита', percent: true },
+  S6: { name: 'Эффективность стойки', percent: true },
+  S7: { name: 'Максимальное здоровье' },
+};

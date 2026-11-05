@@ -14,6 +14,7 @@ interface SessionState {
   initialize: () => Promise<void>;
   refresh: () => Promise<void>;
   viewDemo: () => void;
+  acceptHub: (hub: HubDTO) => void;
 }
 let pending: Promise<void> | null = null;
 let generation = 0;
@@ -68,13 +69,23 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ refreshing: true, error: null });
     try {
       const hub = await apiRequest<HubDTO>('/api/hub', initData);
-      if (token === generation) set({ hub });
+      if (token === generation) get().acceptHub(hub);
     } catch (error) {
       if (token === generation)
         set({ error: error instanceof Error ? error.message : 'Не удалось обновить данные.' });
     } finally {
       if (token === generation) set({ refreshing: false });
     }
+  },
+  acceptHub: (hub) => {
+    const current = get();
+    if (
+      current.mode === 'telegram' &&
+      current.status === 'ready' &&
+      current.hub?.player.id === hub.player.id &&
+      hub.player.inventoryRevision >= current.hub.player.inventoryRevision
+    )
+      set({ hub });
   },
   viewDemo: () => {
     generation++;

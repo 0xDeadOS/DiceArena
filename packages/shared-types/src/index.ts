@@ -31,6 +31,8 @@ export interface DieAffix {
 
 export interface DieDTO {
   id: string;
+  contentVersion: number;
+  effectiveFaces: DieFace[];
   baseType: DieBase;
   ilvl: number;
   quality: number;
@@ -71,6 +73,7 @@ export interface HubDTO {
     username: string | null;
     gold: number;
     facetDust: number;
+    inventoryRevision: number;
     sealFragments: number;
     equippedDieId: string | null;
     vigor: { current: number; maximum: number; nextRestoreAt: string };
@@ -119,7 +122,7 @@ export type BattleDecision = 'DIRECT' | 'SHIFT' | 'FLIP' | 'REROLL';
 export type CombatDie = Pick<
   DieDTO,
   'id' | 'baseType' | 'ilvl' | 'quality' | 'rarity' | 'faces' | 'affixes' | 'powerScore'
->;
+> & { contentVersion?: number };
 export type CombatOutcome = 'VICTORY' | 'DEFEAT';
 export interface EnemyIntent {
   kind: 'ATTACK' | 'GUARD' | 'WINDUP' | 'POISON_ATTACK' | 'SHIELD_BASH' | 'CURSE';
@@ -216,4 +219,50 @@ export interface BattleRollRequest extends RunMutation {
 }
 export interface BattleDecisionRequest extends BattleRollRequest {
   action: BattleDecision;
+}
+
+export interface ItemPermission {
+  allowed: boolean;
+  reason: string | null;
+}
+export interface CraftOptionDTO extends ItemPermission {
+  sphere: SphereType;
+  cost: 1;
+  destructive: boolean;
+}
+export interface ItemPolicyDTO {
+  dieId: string;
+  equip: ItemPermission;
+  dismantle: ItemPermission & { dust: number };
+  craft: CraftOptionDTO[];
+}
+export interface InventoryDTO {
+  hub: HubDTO;
+  activeRunDieId: string | null;
+  policies: ItemPolicyDTO[];
+  powerScoreModel: 'ETV_PASSIVE_V1';
+}
+export interface ItemMutation {
+  dieId: string;
+  expectedRevision: number;
+}
+export interface EquipRequest extends ItemMutation {}
+export interface LockRequest extends ItemMutation {
+  locked: boolean;
+}
+export interface DismantleRequest extends ItemMutation {
+  confirmed: true;
+}
+export interface CraftRequest extends ItemMutation {
+  sphere: SphereType;
+  confirmed: true;
+}
+export type InventoryResult =
+  | { type: 'EQUIP'; dieId: string }
+  | { type: 'LOCK'; dieId: string }
+  | { type: 'DISMANTLE'; dieId: string; dust: number }
+  | { type: 'CRAFT'; dieId: string; sphere: SphereType; before: DieDTO; after: DieDTO };
+export interface InventoryResponse {
+  inventory: InventoryDTO;
+  result: InventoryResult;
 }

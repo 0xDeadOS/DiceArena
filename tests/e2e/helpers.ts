@@ -11,7 +11,17 @@ export async function telegramLaunch(page: Page) {
           expand() {},
           setHeaderColor() {},
           setBackgroundColor() {},
-          BackButton: { show() {}, hide() {}, onClick() {}, offClick() {} },
+          BackButton: {
+            show() {},
+            hide() {},
+            onClick(callback: () => void) {
+              (window as Window & { __testBack?: () => void }).__testBack = callback;
+            },
+            offClick(callback: () => void) {
+              const win = window as Window & { __testBack?: () => void };
+              if (win.__testBack === callback) delete win.__testBack;
+            },
+          },
         },
       },
     });

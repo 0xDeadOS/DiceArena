@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
   addLoot,
   combatLogSchema,
@@ -31,10 +30,12 @@ import type {
   RunMutation,
   TelegramIdentity,
 } from '@dicebound/shared-types';
-import { Prisma } from './generated/prisma/client.js';
+import type { Prisma } from './generated/prisma/client.js';
 import type { PrismaClient } from './generated/prisma/client.js';
 import type { Battle, MapRun, RoomMember } from './generated/prisma/client.js';
 import { battleFace, newSecretSeed, secretInt } from './random.js';
+import { json, lockMember, memberCommand } from './transactions.js';
+import type { Tx } from './transactions.js';
 
 export type GameCommand =
   | { type: 'START' }
@@ -52,30 +53,12 @@ export interface GameRepository {
     now: Date,
   ): Promise<RunDTO>;
 }
-type Tx = Prisma.TransactionClient;
-function json(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
-      .join(',')}}`;
-  return JSON.stringify(value);
-}
-const fingerprint = (command: GameCommand) =>
-  createHash('sha256')
-    .update(`game:v1:${canonical(command)}`)
-    .digest('hex');
-
 export class PrismaGameRepository implements GameRepository {
   constructor(private readonly db: PrismaClient) {}
 
   async current(room: RoomContext, identity: TelegramIdentity): Promise<RunDTO | null> {
     return this.db.$transaction(async (tx) => {
-      const member = await this.lockMember(tx, room, identity);
+      const member = await lockMember(tx, room, identity);
       const active = await tx.mapRun.findFirst({
         where: { ownerId: member.id, status: 'IN_PROGRESS' },
       });
@@ -96,108 +79,62 @@ export class PrismaGameRepository implements GameRepository {
     key: string,
     now: Date,
   ): Promise<RunDTO> {
-    requireRule(
-      /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(key),
-      'INVALID_IDEMPOTENCY_KEY',
-      'Нужен UUIDv4 Idempotency-Key.',
-    );
-    return this.db.$transaction(async (tx) => {
-      // All gameplay writes use the same lock order: member -> run -> battle.
-      const member = await this.lockMember(tx, room, identity);
-      const hash = fingerprint(command);
-      const previous = await tx.idempotencyRecord.findUnique({
-        where: { memberId_key: { memberId: member.id, key } },
-      });
-      if (previous) {
-        requireRule(
-          previous.requestHash === hash,
-          'IDEMPOTENCY_CONFLICT',
-          'Этот ключ уже использован для другого действия.',
-        );
-        requireRule(
-          previous.expiresAt > now && previous.responseStatus === 200,
-          'IDEMPOTENCY_EXPIRED',
-          'Срок повтора истёк. Обновите состояние похода.',
-        );
-        return previous.responseBody as unknown as RunDTO;
-      }
-      // Compact expired responses, but retain nonce tombstones: expiry never re-executes a command.
-      await tx.idempotencyRecord.updateMany({
-        where: { memberId: member.id, expiresAt: { lte: now }, responseStatus: 200 },
-        data: { responseStatus: 409, responseBody: { expired: true } },
-      });
-      let run: MapRun;
-      if (command.type === 'START') run = await this.start(tx, member);
-      else {
-        const owned = await tx.mapRun.findFirst({
-          where: { id: command.runId, ownerId: member.id },
-        });
-        requireRule(owned, 'RUN_NOT_FOUND', 'Поход не найден в этой Обители.');
-        await tx.$queryRaw`SELECT id FROM "MapRun" WHERE id=${owned.id}::uuid FOR UPDATE`;
-        run = await tx.mapRun.findUniqueOrThrow({ where: { id: owned.id } });
-        requireRule(run.status === 'IN_PROGRESS', 'RUN_FINISHED', 'Поход уже завершён.');
-        requireRule(
-          run.revision === command.expectedRevision,
-          'STALE_STATE',
-          'Состояние изменилось на другом устройстве. Обновите поход.',
-        );
-        if (command.type === 'STEP') run = await this.step(tx, run, command.nodeId);
-        else if (command.type === 'RETREAT') {
-          const active = await tx.battle.findFirst({
-            where: { runId: run.id, state: { not: 'FINISHED' } },
+    return memberCommand(
+      this.db,
+      room,
+      identity,
+      'game:v1',
+      command,
+      key,
+      now,
+      async (tx, member) => {
+        let run: MapRun;
+        if (command.type === 'START') run = await this.start(tx, member);
+        else {
+          const owned = await tx.mapRun.findFirst({
+            where: { id: command.runId, ownerId: member.id },
           });
-          if (active) {
-            await tx.$queryRaw`SELECT id FROM "Battle" WHERE id=${active.id}::uuid FOR UPDATE`;
-            const log = combatLogSchema.parse(active.log);
-            await tx.battle.update({
-              where: { id: active.id },
-              data: {
-                state: 'FINISHED',
-                outcome: 'DEFEAT',
-                currentRolledFace: null,
-                log: json(
-                  [...log, { turn: active.turnNumber, message: 'Отступление в Обитель.' }].slice(
-                    -20,
-                  ),
-                ),
-              },
+          requireRule(owned, 'RUN_NOT_FOUND', 'Поход не найден в этой Обители.');
+          await tx.$queryRaw`SELECT id FROM "MapRun" WHERE id=${owned.id}::uuid FOR UPDATE`;
+          run = await tx.mapRun.findUniqueOrThrow({ where: { id: owned.id } });
+          requireRule(run.status === 'IN_PROGRESS', 'RUN_FINISHED', 'Поход уже завершён.');
+          requireRule(
+            run.revision === command.expectedRevision,
+            'STALE_STATE',
+            'Состояние изменилось на другом устройстве. Обновите поход.',
+          );
+          if (command.type === 'STEP') run = await this.step(tx, run, command.nodeId);
+          else if (command.type === 'RETREAT') {
+            const active = await tx.battle.findFirst({
+              where: { runId: run.id, state: { not: 'FINISHED' } },
             });
-          }
-          run = await tx.mapRun.update({
-            where: { id: run.id },
-            data: { revision: { increment: 1 } },
-          });
-          run = await this.settle(tx, member, run, 'DEFEAT', now);
-        } else run = await this.battleAction(tx, member, run, command, now);
-      }
-      const response = await this.snapshot(tx, run);
-      await tx.idempotencyRecord.create({
-        data: {
-          memberId: member.id,
-          key,
-          requestHash: hash,
-          responseStatus: 200,
-          responseBody: json(response),
-          createdAt: now,
-          expiresAt: new Date(now.getTime() + 86_400_000),
-        },
-      });
-      return response;
-    });
-  }
-
-  private async lockMember(
-    tx: Tx,
-    room: RoomContext,
-    identity: TelegramIdentity,
-  ): Promise<RoomMember> {
-    const found = await tx.roomMember.findFirst({
-      where: { roomId: room.id, user: { telegramUserId: BigInt(identity.id) } },
-      select: { id: true },
-    });
-    requireRule(found, 'SESSION_REQUIRED', 'Сначала откройте игровую сессию.');
-    await tx.$queryRaw`SELECT id FROM "RoomMember" WHERE id=${found.id}::uuid FOR UPDATE`;
-    return tx.roomMember.findUniqueOrThrow({ where: { id: found.id } });
+            if (active) {
+              await tx.$queryRaw`SELECT id FROM "Battle" WHERE id=${active.id}::uuid FOR UPDATE`;
+              const log = combatLogSchema.parse(active.log);
+              await tx.battle.update({
+                where: { id: active.id },
+                data: {
+                  state: 'FINISHED',
+                  outcome: 'DEFEAT',
+                  currentRolledFace: null,
+                  log: json(
+                    [...log, { turn: active.turnNumber, message: 'Отступление в Обитель.' }].slice(
+                      -20,
+                    ),
+                  ),
+                },
+              });
+            }
+            run = await tx.mapRun.update({
+              where: { id: run.id },
+              data: { revision: { increment: 1 } },
+            });
+            run = await this.settle(tx, member, run, 'DEFEAT', now);
+          } else run = await this.battleAction(tx, member, run, command, now);
+        }
+        return this.snapshot(tx, run);
+      },
+    );
   }
 
   private async start(tx: Tx, member: RoomMember): Promise<MapRun> {
@@ -314,7 +251,7 @@ export class PrismaGameRepository implements GameRepository {
     if (result.outcome === 'VICTORY') {
       loot = addLoot(loot, trainingReward(node.type));
       await tx.die.updateMany({
-        where: { id: die.id, ownerId: member.id },
+        where: { id: die.id, ownerId: member.id, contentVersion: die.contentVersion ?? 0 },
         data: { lastVictoryAt: now, lastVictoryPowerScore: die.powerScore },
       });
     }
@@ -342,7 +279,11 @@ export class PrismaGameRepository implements GameRepository {
     const reward = settleLoot(lootSchema.parse(run.accumulatedLoot), outcome === 'VICTORY');
     await tx.roomMember.update({
       where: { id: member.id },
-      data: { gold: { increment: reward.gold }, facetDust: { increment: reward.dust } },
+      data: {
+        gold: { increment: reward.gold },
+        facetDust: { increment: reward.dust },
+        inventoryRevision: { increment: 1 },
+      },
     });
     return tx.mapRun.update({
       where: { id: run.id },

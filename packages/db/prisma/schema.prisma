@@ -95,6 +95,7 @@ model RoomMember {
   vigorUpdatedAt     DateTime            @default(now()) @db.Timestamptz(3)
   storedVigor        Int                 @default(3)
   facetDust          Int                 @default(0)
+  inventoryRevision  Int                 @default(0)
   tutorialDone       Boolean             @default(false)
   createdAt          DateTime            @default(now()) @db.Timestamptz(3)
   room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -122,6 +123,7 @@ model Die {
   faces                 Json
   affixes               Json        @default("[]")
   powerScore            Int
+  contentVersion        Int         @default(0)
   isStarter             Boolean     @default(false)
   isLocked              Boolean     @default(false)
   masterCrafted         Boolean     @default(false)

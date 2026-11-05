@@ -50,7 +50,7 @@ const inert = (state: CombatState) => ({
 });
 describe('combat loadouts', () => {
   it('accepts only six distinct faces and supported rarity/affix combinations', () => {
-    expect(combatDieSchema.parse(die)).toEqual(die);
+    expect(combatDieSchema.parse(die)).toEqual({ ...die, contentVersion: 0 });
     expect(
       combatDieSchema.safeParse({ ...die, faces: die.faces.map(() => die.faces[0]) }).success,
     ).toBe(false);

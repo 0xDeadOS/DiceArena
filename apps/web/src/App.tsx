@@ -28,6 +28,7 @@ import { useSession } from './stores/session';
 import { Hub } from './screens/Hub';
 import { Inventory } from './screens/Inventory';
 import { Expeditions } from './screens/Expeditions';
+import { Workshop } from './screens/Workshop';
 import { Wallet } from './screens/Wallet';
 import { Modal } from './components/Modal';
 import { DieDetail } from './components/DieDetail';
@@ -35,18 +36,22 @@ import { DieSculpture } from './components/Die';
 import { Orb } from './components/Orb';
 import { SPHERES } from './lib/catalog';
 
-type Page = 'hub' | 'inventory' | 'wallet' | 'expeditions';
+type Page = 'hub' | 'inventory' | 'wallet' | 'expeditions' | 'workshop';
 type ModalKind =
   | 'entry'
   | 'rules'
   | 'roadmap'
   | 'expeditions'
-  | 'workshop'
   | 'raid'
   | 'leaderboard'
   | 'die'
   | `sphere:${SphereType}`;
 const TITLES: Record<Page, { title: string; subtitle: string; breadcrumb: string }> = {
+  workshop: {
+    title: 'Искусство шести граней',
+    subtitle: 'Одна сфера может изменить всю историю.',
+    breadcrumb: 'МАСТЕРСКАЯ',
+  },
   expeditions: {
     title: 'За порогом Обители',
     subtitle: 'Один бросок. Четыре способа изменить судьбу.',
@@ -69,7 +74,6 @@ const MODAL_TITLES: Record<Exclude<ModalKind, `sphere:${SphereType}`>, string> =
   rules: 'Не удача. Тактика.',
   roadmap: 'История только начинается',
   expeditions: 'За порогом Обители',
-  workshop: 'Искусство шести граней',
   raid: 'Одна команда. Одна легенда.',
   leaderboard: 'Зал славы Обители',
   die: 'Ближе к сути',
@@ -79,6 +83,7 @@ export function App() {
   const { status, mode, hub, error, refreshing, initialize, refresh, viewDemo } = useSession();
   const [page, setPage] = useState<Page>('hub');
   const [modal, setModal] = useState<ModalKind | null>(null);
+  const [workshopDieId, setWorkshopDieId] = useState<string | null>(null);
   const [selectedDie, setSelectedDie] = useState<DieDTO | null>(null);
   useEffect(() => {
     void initialize();
@@ -89,7 +94,15 @@ export function App() {
   useEffect(() => {
     const back = window.Telegram?.WebApp?.BackButton;
     if (mode !== 'telegram' || !back) return;
-    const handle = () => (modal ? setModal(null) : setPage('hub'));
+    const handle = () => {
+      const dialog = document.querySelector<HTMLDialogElement>('dialog.modal[open]');
+      if (dialog) {
+        dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+        return;
+      }
+      if (modal) setModal(null);
+      else setPage('hub');
+    };
     if (modal || page !== 'hub') back.show();
     else back.hide();
     back.onClick(handle);
@@ -101,6 +114,10 @@ export function App() {
   const navigate = (next: Page) => {
     setPage(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  const openWorkshop = (dieId?: string) => {
+    setWorkshopDieId(dieId ?? null);
+    navigate('workshop');
   };
   const inspect = (die: DieDTO) => {
     setSelectedDie(die);
@@ -146,8 +163,7 @@ export function App() {
       key: 'workshop',
       label: 'Мастерская',
       icon: Hammer,
-      action: () => setModal('workshop'),
-      soon: true,
+      action: () => openWorkshop(),
     },
     {
       key: 'raid',
@@ -236,7 +252,7 @@ export function App() {
             <BookOpen size={17} /> Полевой справочник <ArrowUpRight size={13} />
           </button>
           <div className="sidebar-footer">
-            <span className="online-dot" /> Этап 2 · Тренировка
+            <span className="online-dot" /> Этап 3 · Мастерская
           </div>
         </div>
       </aside>
@@ -333,12 +349,19 @@ export function App() {
             />
           )}
           {page === 'expeditions' && <Expeditions onEntry={() => setModal('entry')} />}
-          {page === 'inventory' && <Inventory hub={hub} />}
+          {page === 'inventory' && <Inventory onWorkshop={openWorkshop} />}
+          {page === 'workshop' && (
+            <Workshop
+              key={workshopDieId ?? 'equipped'}
+              initialDieId={workshopDieId}
+              onInventory={() => navigate('inventory')}
+            />
+          )}
           {page === 'wallet' && (
             <Wallet
               hub={hub}
               onSphere={(type) => setModal(`sphere:${type}`)}
-              onWorkshop={() => setModal('workshop')}
+              onWorkshop={() => openWorkshop()}
             />
           )}
           <footer className="page-footer">
@@ -350,7 +373,7 @@ export function App() {
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Мобильная навигация">
-        {navItems.slice(0, 4).map(({ key, label, icon: Icon, action }) => (
+        {navItems.slice(0, 5).map(({ key, label, icon: Icon, action }) => (
           <button
             key={key}
             onClick={action}
@@ -361,10 +384,6 @@ export function App() {
             <span>{label}</span>
           </button>
         ))}
-        <button onClick={() => setModal('rules')}>
-          <BookOpen size={20} />
-          <span>Справочник</span>
-        </button>
       </nav>
       {modal && (
         <Modal
@@ -386,17 +405,19 @@ export function App() {
               <div className="notice">
                 <Hammer size={18} />
                 <span>
-                  Применение сфер появится в Мастерской на этапе 3. Сейчас ресурсы не расходуются.
+                  {mode === 'demo'
+                    ? 'Сейчас ресурсы не расходуются. В обзоре доступен только просмотр Мастерской.'
+                    : 'Применение сферы доступно в Мастерской после выбора кубика и подтверждения цены.'}
                 </span>
               </div>
               <button
                 className="button secondary full"
                 onClick={() => {
                   setModal(null);
-                  navigate('wallet');
+                  openWorkshop();
                 }}
               >
-                Открыть кошелёк <ArrowRight size={15} />
+                Открыть Мастерскую <ArrowRight size={15} />
               </button>
             </div>
           ) : modal === 'die' && selectedDie ? (
@@ -486,8 +507,8 @@ export function App() {
           ) : modal === 'roadmap' ? (
             <div className="prose">
               <p>
-                Готовы Обитель и первый тренировочный поход. Остальные системы добавляются поэтапно
-                — без подмены игры случайными числами в браузере.
+                Готовы Обитель, тренировочный поход и крафт сферами. Остальные системы добавляются
+                поэтапно — без подмены игры случайными числами в браузере.
               </p>
               <div className="roadmap-list">
                 {[
@@ -499,12 +520,12 @@ export function App() {
                     'Бросок и манёвр',
                     'Серверный бой и бесплатный тренировочный маршрут из семи уровней.',
                   ],
-                  ['Маленькая алхимия', 'Шесть сфер, крафт граней и огранка у Мастера.'],
+                  ['Маленькая алхимия', 'Шесть сфер, экипировка, защита и распыление кубиков.'],
                   ['Общая легенда', 'Асинхронные рейды, зал славы и редкие анонсы в чат.'],
                 ].map(([title, text], index) => (
                   <div key={title}>
-                    <span className={`roadmap-step ${index <= 1 ? 'complete' : ''}`}>
-                      {index <= 1 ? <Check size={17} /> : `0${index + 1}`}
+                    <span className={`roadmap-step ${index <= 2 ? 'complete' : ''}`}>
+                      {index <= 2 ? <Check size={17} /> : `0${index + 1}`}
                     </span>
                     <div>
                       <h3>{title}</h3>
@@ -540,18 +561,12 @@ export function App() {
             </div>
           ) : (
             <div className="prose">
-              <span className="stage-label">
-                {modal === 'workshop' ? 'ЭТАП 3 · В РАЗРАБОТКЕ' : 'ЭТАП 4 · В РАЗРАБОТКЕ'}
-              </span>
-              <div className="planned-emblem">
-                {modal === 'workshop' ? <Hammer /> : modal === 'raid' ? <Hexagon /> : <Crown />}
-              </div>
+              <span className="stage-label">ЭТАП 4 · В РАЗРАБОТКЕ</span>
+              <div className="planned-emblem">{modal === 'raid' ? <Hexagon /> : <Crown />}</div>
               <p>
-                {modal === 'workshop'
-                  ? 'Вся сила героя — в одном кубике. Меняйте грани, улучшайте качество и собирайте сочетания свойств. Шесть сфер уже ждут в кошельке.'
-                  : modal === 'raid'
-                    ? 'Соберите 15 фрагментов печати всей Обителью и пробудите общего босса. Рейд продлится 48 часов — быть онлайн одновременно не нужно.'
-                    : 'Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые помогли выиграть бой за последние семь дней.'}
+                {modal === 'raid'
+                  ? 'Соберите 15 фрагментов печати всей Обителью и пробудите общего босса. Рейд продлится 48 часов — быть онлайн одновременно не нужно.'
+                  : 'Здесь появятся лучшие кубики вашей Обители. В зачёт пойдут только артефакты, которые помогли выиграть бой за последние семь дней.'}
               </p>
               <div className="notice">
                 {modal === 'raid' ? (
@@ -566,8 +581,8 @@ export function App() {
                   <>
                     <Sparkles size={21} />
                     <span>
-                      Уже доступны хаб, инвентарь, кошелёк и тренировочные бои. Этот раздел пока не
-                      меняет игровой прогресс.
+                      Уже доступны хаб, инвентарь, Мастерская и тренировочные бои. Этот раздел пока
+                      не меняет игровой прогресс.
                     </span>
                   </>
                 )}

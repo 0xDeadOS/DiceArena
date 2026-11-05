@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { ArrowLeftRight, ShieldCheck } from 'lucide-react';
+import { ArrowLeftRight, ShieldCheck, LockKeyhole } from 'lucide-react';
 import type { DieDTO } from '@dicebound/shared-types';
-import { ACTIONS, BASE_NAMES, RARITY_NAMES } from '../lib/catalog';
+import { ACTIONS, AFFIX_NAMES, BASE_NAMES, RARITY_NAMES } from '../lib/catalog';
 import { FlatDie } from './Die';
 
 export function DieDetail({ die }: { die: DieDTO }) {
   const [selected, setSelected] = useState(1);
-  const face = die.faces.find((item) => item.face === selected)!;
-  const opposite = die.faces.find((item) => item.face === 7 - selected)!;
+  const faces = die.effectiveFaces ?? die.faces;
+  const face = faces.find((item) => item.face === selected)!;
+  const opposite = faces.find((item) => item.face === 7 - selected)!;
   const action = ACTIONS[face.action];
   const OppositeIcon = ACTIONS[opposite.action].icon;
   return (
@@ -40,7 +41,7 @@ export function DieDetail({ die }: { die: DieDTO }) {
         ШЕСТЬ ГРАНЕЙ <span>Выберите грань для осмотра</span>
       </p>
       <div className="faces-grid">
-        {die.faces.map((item) => {
+        {faces.map((item) => {
           const { icon: Icon, className, name } = ACTIONS[item.action];
           return (
             <button
@@ -53,6 +54,9 @@ export function DieDetail({ die }: { die: DieDTO }) {
               <span className="face-index">{item.face}</span>
               <Icon className={className} size={20} />
               <strong>{item.value}</strong>
+              <small className="face-base">
+                база {die.faces.find((f) => f.face === item.face)?.value}
+              </small>
               <span>{name}</span>
             </button>
           );
@@ -75,8 +79,8 @@ export function DieDetail({ die }: { die: DieDTO }) {
         </div>
       </div>
       <p className="muted small-text">
-        Сумма противоположных граней всегда равна 7. В будущем бою один заряд концентрации позволит
-        перевернуть кубик на противоположную грань.
+        Сумма противоположных граней всегда равна 7. Значения выше рассчитаны сервером с учётом
+        качества, базы и аффиксов. PS — оценка потенциала, не урон за ход.
       </p>
       {die.isStarter && (
         <div className="safety-note">
@@ -84,9 +88,31 @@ export function DieDetail({ die }: { die: DieDTO }) {
           <span>Ваш первый кубик защищён от распыления.</span>
         </div>
       )}
+      {die.isLocked && (
+        <div className="safety-note">
+          <LockKeyhole size={17} />
+          <span>Защита включена: крафт и распыление запрещены.</span>
+        </div>
+      )}
+      {die.affixes.length > 0 ? (
+        <div className="affix-list" aria-label="Свойства кубика">
+          {die.affixes.map((affix) => (
+            <div key={affix.id} className={affix.kind === 'PREFIX' ? 'prefix' : 'suffix'}>
+              <span className="affix-tier">T{affix.tier}</span>
+              <span>{AFFIX_NAMES[affix.id]?.name ?? affix.id}</span>
+              <strong>
+                +{affix.value}
+                {AFFIX_NAMES[affix.id]?.percent ? '%' : ''}
+              </strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="no-affixes">Пока без аффиксов. Отливка добавит первые свойства.</p>
+      )}
       <div className="detail-footer">
         {die.isEquipped ? 'Сейчас в руке' : 'В сумке'}
-        <span>Крафт и экипировка других кубиков — на этапе 3</span>
+        <span>Изменения применятся в следующем походе</span>
       </div>
     </div>
   );

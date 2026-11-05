@@ -59,6 +59,7 @@ export const AFFIXES: Record<string, AffixDefinition> = {
 export const combatDieSchema = z
   .object({
     id: z.uuid(),
+    contentVersion: z.number().int().nonnegative().default(0),
     baseType: z.enum(DIE_BASES),
     ilvl: z.number().int().min(1).max(50),
     quality: z.number().int().min(0).max(20),

@@ -3824,3 +3824,768 @@ button svg {
     gap: 13px 16px;
   }
 }
+
+/* Inventory and workshop: server policies, explicit consent, no optimistic spending. */
+.inventory-page,
+.workshop-page {
+  display: flex;
+  flex-direction: column;
+  gap: 23px;
+}
+.inventory-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.inventory-run-note {
+  display: flex;
+  gap: 11px;
+  padding: 15px 18px;
+  border: 1px solid #a4b88430;
+  border-radius: 8px;
+  color: #a8b99c;
+  background: #8caa7407;
+}
+.inventory-run-note p {
+  font-size: 11px;
+  line-height: 1.9;
+}
+.inventory-run-note svg {
+  margin-top: 2px;
+}
+.inventory-success {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #90a3750b;
+  border: 1px solid #91ad7040;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #bccfa9;
+}
+.inventory-success .icon-button {
+  margin-left: auto;
+}
+.item-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+}
+.item-actions .full,
+.item-actions > p,
+.item-actions .dismantle-button {
+  grid-column: 1 / -1;
+}
+.item-actions .button {
+  padding: 10px 12px;
+  gap: 7px;
+  min-height: 44px;
+  font-size: 11px;
+}
+.item-actions .dismantle-button {
+  justify-content: center;
+  color: #c3a18c;
+  min-height: 42px;
+}
+.item-actions button:disabled {
+  cursor: not-allowed;
+}
+.item-actions > p {
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.affix-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+.affix-list > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b9c8ad;
+}
+.affix-list > div.suffix {
+  color: #b9b2cf;
+}
+.affix-list strong {
+  margin-left: auto;
+  white-space: nowrap;
+  font-weight: 550;
+}
+.affix-tier {
+  font-size: 8px;
+  padding: 3px 5px;
+  line-height: 1;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.7;
+}
+.no-affixes {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.face-button .face-base {
+  font-size: 8px;
+  color: #8e9a84;
+  font-weight: 400;
+}
+.workshop-intro {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: radial-gradient(ellipse at left top, #a9995210, transparent 65%);
+}
+.workshop-intro-mark {
+  width: 62px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d1b57755;
+  border-radius: 30px 30px 16px 16px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.workshop-intro h2 {
+  font: 500 33px/1.15 var(--serif);
+  margin: 10px 0;
+}
+.workshop-intro p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 510px;
+}
+.workshop-dust {
+  display: grid;
+  grid-template-columns: 20px auto;
+  align-items: center;
+  gap: 5px 8px;
+  color: var(--gold);
+  font-size: 23px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.workshop-dust small {
+  grid-column: 1 / -1;
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  text-align: center;
+}
+.workshop-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.4fr);
+  gap: 24px;
+  align-items: start;
+}
+.workpiece {
+  padding: 25px 21px;
+  min-width: 0;
+}
+.workpiece .section-heading {
+  margin-bottom: 20px;
+}
+.workpiece .section-heading h2 {
+  margin-top: 10px;
+  font-size: 32px;
+}
+.workpiece .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1.4px;
+}
+.workpiece .detail-title h3 {
+  font-size: 28px;
+}
+.workpiece .detail-title {
+  gap: 10px;
+}
+.workpiece .detail-title .flat-die {
+  width: 43px;
+  height: 43px;
+}
+.workpiece .power-number {
+  font-size: 30px;
+}
+.workpiece .detail-stats {
+  font-size: 9px;
+  gap: 8px;
+}
+.workpiece .detail-stats strong {
+  font-size: 13px;
+}
+.workpiece-select {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.workpiece-select select {
+  width: 100%;
+  margin-top: 9px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #b8b18a45;
+  background: #20281f;
+  color: #d6d7c4;
+  font: inherit;
+  font-size: 11px;
+  min-height: 44px;
+}
+.workpiece-select select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+.workpiece .faces-grid {
+  gap: 7px;
+}
+.workpiece .face-button {
+  padding: 9px 5px;
+}
+.workpiece .face-button strong {
+  font-size: 27px;
+}
+.workpiece .face-button > span:last-child {
+  font-size: 9px;
+}
+.workpiece .section-label > span {
+  display: block;
+  margin: 7px 0 0;
+}
+.workpiece .pair-preview {
+  gap: 12px;
+  padding: 15px 12px;
+}
+.workpiece .pair-preview strong {
+  font-size: 11px;
+}
+.workpiece .detail-footer {
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+}
+.workpiece .detail-footer > span {
+  font-size: 9px;
+}
+.workshop-locked {
+  display: flex;
+  gap: 10px;
+  padding: 15px 0 0;
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  color: var(--gold);
+}
+.workshop-locked p {
+  font-size: 11px;
+  line-height: 1.8;
+}
+.recipe-column {
+  min-width: 0;
+}
+.recipe-column .section-heading {
+  align-items: center;
+  gap: 15px;
+  margin: 7px 0 24px;
+}
+.recipe-column .section-heading h2 {
+  font-size: 31px;
+  margin-top: 10px;
+}
+.recipe-column .eyebrow {
+  font-size: 8px;
+}
+.recipe-column .count-tag {
+  font-size: 8px;
+  white-space: normal;
+  max-width: 115px;
+  text-align: center;
+  line-height: 1.7;
+}
+.recipe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.recipe-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 21px;
+  text-align: left;
+  background: #1b231d;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  color: #e8e8db;
+}
+.recipe-card:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.recipe-card.available {
+  border-color: #c6af704d;
+  background: linear-gradient(155deg, #272d21, #1b231d 70%);
+}
+.recipe-card:not(:disabled):hover {
+  border-color: #d5b67b;
+  background: #293222;
+  transform: translateY(-2px);
+}
+.recipe-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  width: 100%;
+  margin-bottom: 19px;
+}
+.recipe-top .orb {
+  width: 43px;
+  height: 43px;
+}
+.recipe-count {
+  font-size: 11px;
+  color: var(--gold);
+  background: #ccba8012;
+  border: 1px solid #ccba8025;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+.recipe-count.empty {
+  color: var(--muted);
+  border-color: var(--line);
+  background: transparent;
+}
+.recipe-card .eyebrow {
+  font-size: 7px;
+  letter-spacing: 1.8px;
+  color: var(--muted);
+}
+.recipe-card h3 {
+  font: 500 31px/1.1 var(--serif);
+  margin: 6px 0 13px;
+}
+.recipe-card p {
+  font-size: 11px;
+  line-height: 1.85;
+  color: #9da793;
+  margin-bottom: 20px;
+}
+.recipe-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.recipe-card.available .recipe-footer {
+  color: var(--gold);
+}
+.workshop-footnote {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px dashed #b9b08630;
+  border-radius: 9px;
+  margin-top: 18px;
+  padding: 20px;
+}
+.workshop-footnote svg {
+  color: var(--gold);
+  margin-top: 2px;
+}
+.workshop-footnote strong {
+  font-size: 11px;
+  color: #c5cbb6;
+  font-weight: 500;
+}
+.workshop-footnote p {
+  font-size: 10px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.craft-consent-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.craft-consent-item .orb {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+.craft-consent-item h3 {
+  font: 500 32px/1.15 var(--serif);
+  margin-top: 8px;
+}
+.craft-consent-item .eyebrow {
+  font-size: 8px;
+  line-height: 1.8;
+}
+.craft-warning {
+  color: #dab29a;
+  padding-left: 15px;
+  border-left: 2px solid #bd9471;
+}
+.craft-result {
+  padding: 20px 25px;
+}
+.craft-result-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.craft-result-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #bbcba5;
+  font-size: 12px;
+}
+.craft-score-change {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 16px 0 20px;
+}
+.craft-score-change small {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  display: block;
+}
+.craft-score-change strong {
+  display: block;
+  font: 500 45px/1.2 var(--serif);
+  color: #e0c999;
+  margin-top: 6px;
+}
+.craft-score-change strong > span {
+  font: 400 10px/1 sans-serif;
+  color: var(--muted);
+  margin-left: 5px;
+}
+.craft-score-change > svg {
+  color: #9a9f81;
+}
+.score-gain,
+.score-loss {
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  margin-left: auto;
+}
+.score-gain {
+  color: #b3c496;
+  background: #9fb97412;
+}
+.score-loss {
+  color: #d9a98d;
+  background: #d79a7512;
+}
+.craft-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 15px;
+}
+.craft-comparison details {
+  min-width: 0;
+}
+.craft-comparison summary {
+  font-size: 11px;
+  color: var(--gold);
+  cursor: pointer;
+  line-height: 2.3;
+}
+.craft-comparison .die-detail {
+  margin-top: 18px;
+}
+@media (max-width: 1100px) {
+  .workshop-layout {
+    grid-template-columns: minmax(255px, 0.85fr) minmax(0, 1.2fr);
+    gap: 16px;
+  }
+  .workpiece {
+    padding: 22px 16px;
+  }
+  .recipe-card {
+    padding: 17px 13px;
+  }
+  .recipe-card h3 {
+    font-size: 27px;
+  }
+  .recipe-column .section-heading h2 {
+    font-size: 27px;
+  }
+  .recipe-column .section-heading {
+    flex-wrap: wrap;
+  }
+  .workshop-intro h2 {
+    font-size: 29px;
+  }
+}
+@media (max-width: 850px) {
+  .workshop-layout {
+    grid-template-columns: 1fr;
+  }
+  .recipe-column {
+    grid-row: 2;
+  }
+  .workpiece {
+    grid-row: 1;
+  }
+  .workshop-intro {
+    padding: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .workshop-intro > div:nth-child(2) {
+    flex: 1;
+    min-width: 180px;
+  }
+  .workshop-intro-mark {
+    width: 45px;
+    height: 55px;
+  }
+  .workshop-dust {
+    font-size: 18px;
+  }
+  .workpiece .section-heading h2,
+  .recipe-column .section-heading h2 {
+    font-size: 31px;
+  }
+  .recipe-card {
+    padding: 22px;
+  }
+  .recipe-card h3 {
+    font-size: 32px;
+  }
+  .craft-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .inventory-page,
+  .workshop-page {
+    gap: 18px;
+  }
+  .inventory-feedback .run-toolbar {
+    gap: 10px;
+  }
+  .inventory-feedback .run-toolbar > span {
+    font-size: 10px;
+  }
+  .inventory-feedback .text-button {
+    min-height: 40px;
+  }
+  .inventory-run-note p {
+    font-size: 11px;
+  }
+  .inventory-success {
+    font-size: 11px;
+    padding: 10px 13px;
+  }
+  .item-actions .button {
+    font-size: 11px;
+    min-height: 46px;
+  }
+  .item-actions .dismantle-button {
+    font-size: 11px;
+  }
+  .affix-list > div {
+    font-size: 11px;
+  }
+  .workshop-intro {
+    padding: 18px 16px;
+    gap: 14px;
+  }
+  .workshop-intro .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.1px;
+  }
+  .workshop-intro h2 {
+    font-size: 28px;
+  }
+  .workshop-intro p {
+    font-size: 11px;
+  }
+  .workshop-intro-mark {
+    display: none;
+  }
+  .workshop-intro > div:nth-child(2) {
+    flex-basis: 100%;
+  }
+  .workshop-dust {
+    margin: 0;
+    grid-template-columns: 17px auto auto;
+    font-size: 19px;
+    gap: 8px;
+  }
+  .workshop-dust small {
+    grid-column: auto;
+  }
+  .recipe-column .section-heading {
+    gap: 13px;
+    margin-bottom: 19px;
+  }
+  .recipe-column .section-heading h2 {
+    font-size: 29px;
+  }
+  .recipe-column .section-heading .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.2px;
+  }
+  .recipe-column .count-tag {
+    font-size: 8px;
+    max-width: 95px;
+  }
+  .recipe-grid {
+    gap: 11px;
+  }
+  .recipe-card {
+    padding: 18px 14px;
+  }
+  .recipe-top {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .recipe-top .orb {
+    width: 36px;
+    height: 36px;
+  }
+  .recipe-count {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .recipe-card h3 {
+    font-size: clamp(18px, 5.7vw, 27px);
+    overflow-wrap: anywhere;
+  }
+  .recipe-card p {
+    font-size: 11px;
+    line-height: 1.8;
+    margin-bottom: 15px;
+  }
+  .recipe-footer {
+    font-size: 10px;
+    padding-top: 12px;
+  }
+  .workpiece {
+    padding: 23px 19px;
+  }
+  .workpiece .section-heading .text-button {
+    font-size: 11px;
+  }
+  .workpiece .power-number {
+    font-size: 32px;
+  }
+  .workpiece-select select {
+    font-size: 12px;
+  }
+  .workpiece .detail-stats {
+    font-size: 9px;
+  }
+  .workpiece .detail-title h3 {
+    font-size: 28px;
+  }
+  .workpiece .pair-preview strong {
+    font-size: 12px;
+  }
+  .workshop-footnote {
+    padding: 17px 15px;
+  }
+  .workshop-footnote strong {
+    font-size: 12px;
+  }
+  .workshop-footnote p {
+    font-size: 11px;
+  }
+  .craft-consent-item {
+    gap: 12px;
+  }
+  .craft-consent-item h3 {
+    font-size: 28px;
+  }
+  .craft-consent-item .eyebrow {
+    font-size: 7px;
+  }
+  .craft-result {
+    padding: 16px;
+  }
+  .craft-score-change {
+    gap: 18px;
+  }
+  .craft-score-change strong {
+    font-size: 39px;
+  }
+  .score-gain,
+  .score-loss {
+    font-size: 11px;
+    padding: 7px;
+  }
+  .craft-result .small-text {
+    font-size: 11px;
+  }
+  .craft-comparison summary {
+    font-size: 12px;
+    min-height: 38px;
+  }
+  .face-button .face-base {
+    font-size: 9px;
+  }
+}
+@media (max-width: 360px) {
+  .recipe-card {
+    padding: 16px 12px;
+  }
+  .recipe-top .orb {
+    width: 31px;
+    height: 31px;
+  }
+  .recipe-column .section-heading h2 {
+    font-size: 27px;
+  }
+  .item-actions {
+    grid-template-columns: 1fr;
+  }
+}
+.workpiece-details > summary {
+  font-size: 12px;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 12px 0;
+  line-height: 1.8;
+}
+.workpiece-details > summary > span {
+  display: block;
+  margin-left: 14px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.workpiece-details > .die-detail {
+  margin-top: 14px;
+}
