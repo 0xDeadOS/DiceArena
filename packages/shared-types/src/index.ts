@@ -242,6 +242,7 @@ export interface ItemPolicyDTO {
   equip: ItemPermission;
   dismantle: ItemPermission & { dust: number };
   craft: CraftOptionDTO[];
+  masterFacet: ItemPermission & { cost: number };
 }
 export interface InventoryDTO {
   hub: HubDTO;
@@ -264,6 +265,12 @@ export interface CraftRequest extends ItemMutation {
   sphere: SphereType;
   confirmed: true;
 }
+/** The player picks the face and the action; the base value stays a server roll. */
+export interface MasterFacetRequest extends ItemMutation {
+  face: number;
+  action: FaceAction;
+  confirmed: true;
+}
 export type InventoryResult =
   | { type: 'TUTORIAL_REWARD'; sphere: 'CASTING'; amount: 1 }
   | { type: 'TUTORIAL_COMPLETE' }
@@ -272,7 +279,16 @@ export type InventoryResult =
   | { type: 'EQUIP'; dieId: string }
   | { type: 'LOCK'; dieId: string }
   | { type: 'DISMANTLE'; dieId: string; dust: number }
-  | { type: 'CRAFT'; dieId: string; sphere: SphereType; before: DieDTO; after: DieDTO };
+  | { type: 'CRAFT'; dieId: string; sphere: SphereType; before: DieDTO; after: DieDTO }
+  | {
+      type: 'MASTER_FACET';
+      dieId: string;
+      face: number;
+      action: FaceAction;
+      dust: number;
+      before: DieDTO;
+      after: DieDTO;
+    };
 export interface InventoryResponse {
   inventory: InventoryDTO;
   result: InventoryResult;

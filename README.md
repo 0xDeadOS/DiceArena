@@ -2,7 +2,7 @@
 
 Асинхронный roguelike для дружеских Telegram-чатов. Один чат — одна **Обитель**, отдельный герой и один активный боевой кубик.
 
-**Готовы основание, серверный тренировочный бой, инвентарь с Мастерской и этап 4 по v2.0: полное обучение, обычные экспедиции с расходом бодрости и серверный дроп предметов/сфер. Это ещё не весь MVP.**
+**Готовы основание, серверный тренировочный бой, инвентарь с Мастерской, обучение, обычные экспедиции с расходом бодрости, серверный дроп предметов/сфер и точечная огранка Мастера за пыль. Это ещё не весь MVP.**
 
 ## Что уже работает
 
@@ -31,7 +31,7 @@
 
 ### Чего ещё нет
 
-Точечной огранки Мастера за пыль, рейдовых атак, рейтинга и игровых анонсов, предметов редкости `UNIQUE`.
+Рейдовых атак, зачётного рейтинга и игровых анонсов, предметов редкости `UNIQUE`.
 
 Новый игрок по-прежнему получает **один** стартовый кубик и сферы 3/2/1; остальное добывается в экспедициях. Endpoints не создают бесплатное снаряжение/валюту. Пыль сохраняется. Автооценка пассивного EV, диапазоны случайного гранения, выход распыления, шкала сложности и таблицы дропа реализованы как **явные временные правила**, не как откалиброванный финальный баланс.
 
@@ -104,27 +104,28 @@ API не доверяет произвольному `X-Forwarded-For`. За rev
 
 ## API этого этапа
 
-| Метод | Путь                       | Назначение / тело JSON                                                          |
-| ----- | -------------------------- | ------------------------------------------------------------------------------- |
-| POST  | `/api/auth/session`        | Вход, создание/загрузка профиля; `{}`                                           |
-| GET   | `/api/hub`                 | Баланс, инвентарь, бодрость, summary похода/рейда                               |
-| GET   | `/api/map/current`         | Активный или последний завершённый поход; `{ run: null }`, если походов ещё нет |
-| POST  | `/api/map/start`           | Новая бесплатная тренировка; `{}`                                               |
-| POST  | `/api/map/step`            | `{ runId, expectedRevision, nodeId }`                                           |
-| POST  | `/api/map/retreat`         | `{ runId, expectedRevision }`                                                   |
-| POST  | `/api/battle/roll`         | `{ runId, expectedRevision, battleId }`                                         |
-| POST  | `/api/battle/decision`     | `{ runId, expectedRevision, battleId, action }`                                 |
-| GET   | `/api/inventory`           | Инвентарь, баланс, активный предмет похода, разрешения на действия              |
-| POST  | `/api/inventory/equip`     | `{ dieId, expectedRevision }`                                                   |
-| POST  | `/api/inventory/lock`      | `{ dieId, expectedRevision, locked }`                                           |
-| POST  | `/api/inventory/dismantle` | `{ dieId, expectedRevision, confirmed: true }`                                  |
-| POST  | `/api/workshop/craft`      | `{ dieId, expectedRevision, sphere, confirmed: true }`                          |
-| GET   | `/health/live`             | Жив ли процесс                                                                  |
-| GET   | `/health/ready`            | Доступен ли PostgreSQL                                                          |
+| Метод | Путь                         | Назначение / тело JSON                                                          |
+| ----- | ---------------------------- | ------------------------------------------------------------------------------- |
+| POST  | `/api/auth/session`          | Вход, создание/загрузка профиля; `{}`                                           |
+| GET   | `/api/hub`                   | Баланс, инвентарь, бодрость, summary похода/рейда                               |
+| GET   | `/api/map/current`           | Активный или последний завершённый поход; `{ run: null }`, если походов ещё нет |
+| POST  | `/api/map/start`             | Новая бесплатная тренировка; `{}`                                               |
+| POST  | `/api/map/step`              | `{ runId, expectedRevision, nodeId }`                                           |
+| POST  | `/api/map/retreat`           | `{ runId, expectedRevision }`                                                   |
+| POST  | `/api/battle/roll`           | `{ runId, expectedRevision, battleId }`                                         |
+| POST  | `/api/battle/decision`       | `{ runId, expectedRevision, battleId, action }`                                 |
+| GET   | `/api/inventory`             | Инвентарь, баланс, активный предмет похода, разрешения на действия              |
+| POST  | `/api/inventory/equip`       | `{ dieId, expectedRevision }`                                                   |
+| POST  | `/api/inventory/lock`        | `{ dieId, expectedRevision, locked }`                                           |
+| POST  | `/api/inventory/dismantle`   | `{ dieId, expectedRevision, confirmed: true }`                                  |
+| POST  | `/api/workshop/craft`        | `{ dieId, expectedRevision, sphere, confirmed: true }`                          |
+| POST  | `/api/workshop/master-facet` | `{ dieId, expectedRevision, face, action, confirmed: true }`                    |
+| GET   | `/health/live`               | Жив ли процесс                                                                  |
+| GET   | `/health/ready`              | Доступен ли PostgreSQL                                                          |
 
 `action`: `DIRECT`, `SHIFT`, `FLIP` или `REROLL`. Мутации карты/боя возвращают `{ run: RunDTO }`; `options` уже рассчитаны сервером. Отдельный `commit` не нужен: **flip завершает ход**, а **reroll остаётся в выборе действия**.
 
-Каждый `POST /api/map/*`, `/api/battle/*`, `/api/inventory/*` и `/api/workshop/craft` требует заголовок **`Idempotency-Key: <UUIDv4>`**. Новый ключ создаётся один раз на намерение игрока; после timeout/5xx/429 повторяются **тот же ключ и неизменное тело**. До завершения повтора другие действия заблокированы. Повтор успешной команды в течение 24 часов возвращает сохранённый JSON, даже если поход уже продвинулся; после повтора клиент запрашивает `/api/map/current` либо `/api/inventory`. Изменённое тело с прежним ключом — `409 IDEMPOTENCY_CONFLICT`, просроченный ключ — `409 IDEMPOTENCY_EXPIRED`, не повторное выполнение.
+Каждый `POST /api/map/*`, `/api/battle/*`, `/api/inventory/*` и `/api/workshop/*` требует заголовок **`Idempotency-Key: <UUIDv4>`**. Новый ключ создаётся один раз на намерение игрока; после timeout/5xx/429 повторяются **тот же ключ и неизменное тело**. До завершения повтора другие действия заблокированы. Повтор успешной команды в течение 24 часов возвращает сохранённый JSON, даже если поход уже продвинулся; после повтора клиент запрашивает `/api/map/current` либо `/api/inventory`. Изменённое тело с прежним ключом — `409 IDEMPOTENCY_CONFLICT`, просроченный ключ — `409 IDEMPOTENCY_EXPIRED`, не повторное выполнение.
 
 `runId`/`battleId` не дают доступа сами по себе: сервер проверяет владельца в подписанном контексте чата. Для мутаций существующего похода обязателен целочисленный `expectedRevision` из последнего ответа. Устаревшая версия — `409 STALE_STATE`; клиент загружает актуальный поход, не повторяя старый ход с новой версией. Неизвестные поля, в том числе `face`, `seed`, `userId`, `chatId` и выбор режима наград, отклоняются.
 

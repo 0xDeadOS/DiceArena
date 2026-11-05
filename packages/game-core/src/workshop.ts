@@ -198,6 +198,53 @@ export function craftDie(
   die.powerScore = evaluateDiePowerScore(die);
   return parseCombatDie(die);
 }
+/**
+ * Мастерская огранка: игрок выбирает грань и действие, базовое значение остаётся серверным
+ * броском в том же диапазоне, что и у сферы Гранения. Цена — пыль, растёт вместе с ilvl.
+ * Временные параметры этого инкремента, не финальный баланс.
+ */
+export const MASTER_FACET_BASE_COST = 5;
+export const MASTER_FACET_STEP_COST = 3;
+export function masterFacetCost(ilvl: number): number {
+  if (!Number.isInteger(ilvl) || ilvl < 1 || ilvl > 50) throw new RangeError('Invalid ilvl');
+  return MASTER_FACET_BASE_COST + MASTER_FACET_STEP_COST * Math.floor((ilvl - 1) / 5);
+}
+export function masterFacetRejection(
+  die: Pick<CombatDie, 'rarity'> & { isLocked?: boolean },
+  face: number,
+  action: FaceAction,
+): Rejection | null {
+  if (!Number.isInteger(face) || face < 1 || face > 6)
+    return { code: 'INVALID_FACE', message: 'Грань должна быть от 1 до 6.' };
+  if (!FACE_ACTIONS.includes(action))
+    return { code: 'INVALID_ACTION', message: 'Неизвестное действие грани.' };
+  if (die.isLocked) return { code: 'DIE_LOCKED', message: 'Сначала снимите защиту кубика.' };
+  if (die.rarity === 'UNIQUE')
+    return { code: 'UNSUPPORTED_DIE', message: 'Уникальные кубики пока нельзя изменять.' };
+  return null;
+}
+/** Never awards a free preview: the value is drawn inside the published faceting range. */
+export function masterFacetDie(
+  previous: CombatDie & { isLocked?: boolean },
+  face: number,
+  action: FaceAction,
+  random: RandomInt,
+): CombatDie {
+  const rejection = masterFacetRejection(previous, face, action);
+  requireRule(
+    !rejection,
+    rejection?.code ?? 'MASTER_FACET_UNAVAILABLE',
+    rejection?.message ?? 'Огранка недоступна.',
+  );
+  const die = parseCombatDie(previous);
+  const [low, high] = facetingRange(die.ilvl, action);
+  const index = die.faces.findIndex((f) => f.face === face);
+  requireRule(index >= 0, 'INVALID_FACE', 'У кубика нет такой грани.');
+  die.faces[index] = { face, action, value: low + draw(random, high - low + 1) };
+  die.contentVersion = (die.contentVersion ?? 0) + 1;
+  die.powerScore = evaluateDiePowerScore(die);
+  return parseCombatDie(die);
+}
 export const dismantleDust = (rarity: CombatDie['rarity']) =>
   ({ NORMAL: 1, MAGIC: 3, RARE: 6, UNIQUE: 0 })[rarity];
 export function dismantlePermission(

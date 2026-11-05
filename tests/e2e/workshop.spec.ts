@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { craftDie, facePlay } from '@dicebound/game-core';
+import { craftDie, facePlay, masterFacetCost, masterFacetDie } from '@dicebound/game-core';
 import type { DieDTO, HubDTO, InventoryResponse, SphereType } from '@dicebound/shared-types';
 import { fixtureHub } from '../fixtures.js';
 import { fixtureInventory } from '../inventory-fixtures.js';
@@ -32,6 +32,42 @@ function craft(hub: HubDTO, sphere: SphereType): InventoryResponse {
   return {
     inventory: fixtureInventory(next),
     result: { type: 'CRAFT', dieId: before.id, sphere, before, after },
+  };
+}
+function faceted(hub: HubDTO, face: number, action: 'STRIKE' | 'GUARD' | 'PIERCE' | 'HEAL') {
+  const before = hub.inventory.dice[0]!;
+  const item = masterFacetDie(before, face, action, () => 2);
+  const after: DieDTO = {
+    ...before,
+    ...item,
+    contentVersion: item.contentVersion!,
+    effectiveFaces: item.faces.map((f) => ({ ...f, value: facePlay(item, f.face).value })),
+    masterCrafted: true,
+  };
+  const cost = masterFacetCost(before.ilvl);
+  const next = {
+    ...hub,
+    player: {
+      ...hub.player,
+      facetDust: hub.player.facetDust - cost,
+      inventoryRevision: hub.player.inventoryRevision + 1,
+    },
+    inventory: { ...hub.inventory, dice: [after, ...hub.inventory.dice.slice(1)] },
+  };
+  return {
+    cost,
+    response: {
+      inventory: fixtureInventory(next),
+      result: {
+        type: 'MASTER_FACET' as const,
+        dieId: before.id,
+        face,
+        action,
+        dust: cost,
+        before,
+        after,
+      },
+    },
   };
 }
 async function workshop(page: Page) {
@@ -319,4 +355,101 @@ test('active-run protection and quality cap are visible before confirmation', as
   await expect(
     page.getByRole('button', { name: 'Применить: Сфера Закалки', exact: true }),
   ).toContainText('20%');
+});
+
+test('master faceting needs dust, keeps the choice server-sided and saves one paid cut', async ({
+  page,
+}) => {
+  const raw = await authenticatedPage(page);
+  const poor = fixtureHub();
+  await page.route('**/api/inventory', (route) => route.fulfill({ json: fixtureInventory(poor) }));
+  await workshop(page);
+  await expect(page.locator('.facet-panel')).toContainText('Мастер граней');
+  await expect(page.locator('.facet-panel .facet-blocked')).toContainText('Нужно 5 пыли');
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
+  await page.locator('.facet-face').first().click();
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
+
+  let hub = { ...poor, player: { ...poor.player, facetDust: 12 } };
+  const sent: { key: string | undefined; body: unknown }[] = [];
+  await page.route('**/api/inventory', (route) => route.fulfill({ json: fixtureInventory(hub) }));
+  await page.route('**/api/workshop/master-facet', (route) => {
+    sent.push({
+      key: route.request().headers()['idempotency-key'],
+      body: route.request().postDataJSON(),
+    });
+    expect(route.request().headers().authorization).toBe(`tma ${raw}`);
+    const { response } = faceted(hub, 4, 'PIERCE');
+    hub = response.inventory.hub;
+    return route.fulfill({ json: response });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Мастерская', exact: true }).click();
+  await expect(page.locator('.facet-panel')).toContainText('12');
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
+  await page.locator('.facet-face').nth(3).click();
+  await expect(page.getByRole('button', { name: 'Огранить грань 4', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Укол', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Огранить грань 4', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Цена: 5 пыли');
+  await expect(page.getByRole('dialog')).toContainText('12 → 7');
+  await expect(page.getByRole('dialog')).toContainText('Базовое значение определит сервер');
+  expect(sent).toHaveLength(0);
+  await page.keyboard.press('Escape');
+  expect(sent).toHaveLength(0);
+  await page.getByRole('button', { name: 'Огранить грань 4', exact: true }).click();
+  await page.getByRole('button', { name: 'Подтвердить и потратить 5 пыли', exact: true }).click();
+  await expect(page.getByText('Огранка сохранена')).toBeVisible();
+  await expect(page.locator('.craft-result')).toContainText(
+    'Мастер огранел грань 4: Укол за 5 пыли',
+  );
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.body).toEqual({
+    dieId: poor.inventory.dice[0]!.id,
+    expectedRevision: 0,
+    face: 4,
+    action: 'PIERCE',
+    confirmed: true,
+  });
+  expect(sent[0]!.key).toMatch(
+    /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,
+  );
+  await expect(page.locator('.workshop-intro')).toContainText('7');
+  await expect(page.locator('.workpiece .detail-stats')).toContainText('Да');
+  await page.reload();
+  await page.getByRole('button', { name: 'Мастерская', exact: true }).click();
+  await expect(page.locator('.workshop-intro')).toContainText('7');
+  expect(sent).toHaveLength(1);
+});
+
+test('locked dice and demo preview cannot start a faceting request', async ({ page }) => {
+  const calls: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/api/')) calls.push(r.url());
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Мастерская', exact: true }).click();
+  await expect(page.locator('.facet-panel')).toContainText('только для просмотра');
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
+  await page.locator('.facet-face').first().click();
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
+  expect(calls.filter((url) => url.includes('master-facet'))).toHaveLength(0);
+
+  await authenticatedPage(page);
+  const hub = fixtureHub();
+  const locked = {
+    ...hub,
+    inventory: {
+      ...hub.inventory,
+      dice: hub.inventory.dice.map((d, i) => (i === 0 ? { ...d, isLocked: true } : d)),
+    },
+    player: { ...hub.player, facetDust: 40 },
+  };
+  await page.route('**/api/inventory', (route) =>
+    route.fulfill({ json: fixtureInventory(locked) }),
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Мастерская', exact: true }).click();
+  await expect(page.locator('.facet-panel .facet-blocked')).toContainText('защит');
+  await expect(page.getByRole('button', { name: /Огранить грань/ })).toBeDisabled();
 });

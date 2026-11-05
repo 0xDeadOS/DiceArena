@@ -27,6 +27,7 @@ function readonlyInventory(
         reason,
         destructive: ['FACETING', 'RESHAPING', 'CLEANSING'].includes(sphere),
       })),
+      masterFacet: { allowed: false, reason, cost: 0 },
     })),
   };
 }

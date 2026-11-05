@@ -38,7 +38,7 @@ export function Wallet({
           <Sparkles size={18} />
           {hub.player.facetDust} пыли граней
         </span>
-        <small>Пыль сохраняется для будущей точечной огранки.</small>
+        <small>Пыль тратится на точечную огранку в Мастерской.</small>
       </div>
       <div className="wallet-grid">
         {hub.inventory.spheres.map(({ type, amount }) => (

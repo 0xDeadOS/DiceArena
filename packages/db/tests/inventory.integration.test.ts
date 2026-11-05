@@ -4,6 +4,7 @@ import type { RoomContext, RunDTO, SphereType } from '@dicebound/shared-types';
 import {
   craftDie,
   evaluateDiePowerScore,
+  facetingRange,
   parseCombatDie,
   starterFaces,
 } from '@dicebound/game-core';
@@ -556,6 +557,193 @@ describe('PostgreSQL inventory and workshop', () => {
       const read = await app.inject({ url: '/api/inventory', headers });
       expect(read.statusCode).toBe(200);
       expect(read.json()).toEqual(first.json().inventory);
+      expect(await h.db.idempotencyRecord.count()).toBe(1);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('master faceting for dust', () => {
+  const giveDust = (amount: number) =>
+    h.db.roomMember.update({ where: { id: owner }, data: { facetDust: amount } });
+  const facet = (
+    face: number,
+    action: 'STRIKE' | 'GUARD' | 'PIERCE' | 'HEAL',
+    expectedRevision: number,
+    dieId = starter,
+    key = randomUUID(),
+  ) => exec({ type: 'MASTER_FACET', dieId, face, action, expectedRevision, confirmed: true }, key);
+  it('charges dust, rewrites only the chosen face and marks the die as master crafted', async () => {
+    await giveDust(12);
+    await h.db.die.update({
+      where: { id: starter },
+      data: { lastVictoryAt: NOW, lastVictoryPowerScore: 55 },
+    });
+    const before = await h.db.die.findUniqueOrThrow({ where: { id: starter } });
+    const result = await facet(4, 'PIERCE', 0);
+    expect(result.result).toMatchObject({
+      type: 'MASTER_FACET',
+      dieId: starter,
+      face: 4,
+      action: 'PIERCE',
+      dust: 5,
+    });
+    expect(result.inventory.hub.player.facetDust).toBe(7);
+    expect(result.inventory.hub.player.inventoryRevision).toBe(1);
+    const item = result.inventory.hub.inventory.dice[0]!;
+    expect(item.masterCrafted).toBe(true);
+    expect(item.contentVersion).toBe(1);
+    expect(item.faces.filter((f) => f.face !== 4)).toEqual(
+      parseCombatDie(before).faces.filter((f) => f.face !== 4),
+    );
+    const [low, high] = facetingRange(item.ilvl, 'PIERCE');
+    expect(item.faces.find((f) => f.face === 4)).toMatchObject({ action: 'PIERCE' });
+    expect(item.faces.find((f) => f.face === 4)!.value).toBeGreaterThanOrEqual(low);
+    expect(item.faces.find((f) => f.face === 4)!.value).toBeLessThanOrEqual(high);
+    const stored = await h.db.die.findUniqueOrThrow({ where: { id: starter } });
+    expect(stored.masterCrafted).toBe(true);
+    expect(stored.lastVictoryAt).toBeNull();
+    expect(stored.lastVictoryPowerScore).toBeNull();
+    expect(stored.powerScore).toBe(evaluateDiePowerScore(parseCombatDie(stored)));
+    const spheres = await h.db.userCurrency.findMany({ where: { ownerId: owner } });
+    expect(spheres.reduce((sum, row) => sum + row.amount, 0)).toBe(6);
+  });
+  it('refuses without dust, on a locked die and on a stale revision without charging', async () => {
+    await giveDust(0);
+    await expect(facet(2, 'STRIKE', 0)).rejects.toMatchObject({ code: 'DUST_MISSING' });
+    await giveDust(20);
+    await h.db.die.update({ where: { id: starter }, data: { isLocked: true } });
+    await expect(facet(2, 'STRIKE', 0)).rejects.toMatchObject({ code: 'DIE_LOCKED' });
+    await h.db.die.update({ where: { id: starter }, data: { isLocked: false } });
+    await expect(facet(2, 'STRIKE', 7)).rejects.toMatchObject({ code: 'STALE_INVENTORY' });
+    expect((await h.db.roomMember.findUniqueOrThrow({ where: { id: owner } })).facetDust).toBe(20);
+    expect(await h.db.idempotencyRecord.count()).toBe(0);
+  });
+  it('rejects an impossible face or action before spending anything', async () => {
+    await giveDust(20);
+    await expect(facet(0, 'STRIKE', 0)).rejects.toMatchObject({ code: 'INVALID_FACE' });
+    await expect(facet(7, 'STRIKE', 0)).rejects.toMatchObject({ code: 'INVALID_FACE' });
+    await expect(
+      exec({
+        type: 'MASTER_FACET',
+        dieId: starter,
+        face: 2,
+        action: 'BLOCK' as never,
+        expectedRevision: 0,
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ACTION' });
+    expect((await h.db.roomMember.findUniqueOrThrow({ where: { id: owner } })).facetDust).toBe(20);
+  });
+  it('twenty simultaneous retries spend one price and return the identical cut', async () => {
+    await giveDust(5);
+    const key = randomUUID();
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => facet(6, 'GUARD', 0, starter, key)),
+    );
+    for (const result of results) expect(result).toEqual(results[0]);
+    expect(results[0]?.inventory.hub.player.facetDust).toBe(0);
+    expect(results[0]?.inventory.hub.player.inventoryRevision).toBe(1);
+    expect(await h.db.idempotencyRecord.count()).toBe(1);
+    const stored = await h.db.die.findUniqueOrThrow({ where: { id: starter } });
+    expect(stored.contentVersion).toBe(1);
+  });
+  it('keeps dust when the transaction rolls back after the cut was computed', async () => {
+    await giveDust(9);
+    await h.db
+      .$executeRaw`ALTER TABLE "IdempotencyRecord" ADD CONSTRAINT test_reject CHECK (false) NOT VALID`;
+    try {
+      await expect(facet(3, 'HEAL', 0)).rejects.toThrow();
+    } finally {
+      await h.db.$executeRaw`ALTER TABLE "IdempotencyRecord" DROP CONSTRAINT test_reject`;
+    }
+    const member = await h.db.roomMember.findUniqueOrThrow({ where: { id: owner } });
+    expect(member.facetDust).toBe(9);
+    expect(member.inventoryRevision).toBe(0);
+    expect((await h.db.die.findUniqueOrThrow({ where: { id: starter } })).contentVersion).toBe(0);
+  });
+  it('does not change the snapshot of an active expedition', async () => {
+    await giveDust(30);
+    const run = await h.game.execute(room, alice, { type: 'START' }, randomUUID(), NOW);
+    const snapshotBefore = await h.db.mapRun.findUniqueOrThrow({ where: { id: run.id } });
+    const result = await facet(1, 'STRIKE', 0);
+    expect(result.inventory.hub.player.facetDust).toBe(25);
+    const snapshotAfter = await h.db.mapRun.findUniqueOrThrow({ where: { id: run.id } });
+    expect(snapshotAfter.dieSnapshot).toEqual(snapshotBefore.dieSnapshot);
+  });
+  it('publishes the price and the blocking reason in the read-only policies', async () => {
+    await giveDust(1);
+    const cheap = await current();
+    expect(cheap.policies[0]?.masterFacet).toMatchObject({ allowed: false, cost: 5 });
+    expect(cheap.policies[0]?.masterFacet.reason).toContain('5');
+    await giveDust(50);
+    await h.db.die.update({ where: { id: starter }, data: { isLocked: true } });
+    const locked = await current();
+    expect(locked.policies[0]?.masterFacet.allowed).toBe(false);
+    expect(locked.policies[0]?.masterFacet.reason).toContain('защит');
+    await h.db.die.update({ where: { id: starter }, data: { isLocked: false } });
+    expect((await current()).policies[0]?.masterFacet).toMatchObject({ allowed: true, cost: 5 });
+  });
+  it('validates the HTTP body and replays the same key without a second charge', async () => {
+    await giveDust(10);
+    let time = NOW;
+    const app = await buildApp({
+      profiles: h.profiles,
+      game: h.game,
+      inventory: h.inventory,
+      membership: { assertMember: async () => undefined },
+      botToken: TEST_TOKEN,
+      clock: () => time,
+      logLevel: false,
+    });
+    try {
+      const headers = { authorization: `tma ${signedInitData()}`, 'idempotency-key': randomUUID() };
+      for (const body of [
+        { dieId: starter, expectedRevision: 0, face: 0, action: 'STRIKE', confirmed: true },
+        { dieId: starter, expectedRevision: 0, face: 2, action: 'BLOCK', confirmed: true },
+        {
+          dieId: starter,
+          expectedRevision: 0,
+          face: 2,
+          action: 'STRIKE',
+          confirmed: true,
+          cost: 0,
+        },
+      ]) {
+        const rejected = await app.inject({
+          method: 'POST',
+          url: '/api/workshop/master-facet',
+          headers: { ...headers, 'idempotency-key': randomUUID() },
+          payload: body,
+        });
+        expect(rejected.statusCode).toBe(400);
+      }
+      const body = {
+        dieId: starter,
+        expectedRevision: 0,
+        face: 5,
+        action: 'GUARD',
+        confirmed: true,
+      };
+      // @fastify/rate-limit counts real time: five signed requests per second per user.
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      const first = await app.inject({
+        method: 'POST',
+        url: '/api/workshop/master-facet',
+        headers,
+        payload: body,
+      });
+      expect(first.statusCode).toBe(200);
+      expect(first.json().result).toMatchObject({ type: 'MASTER_FACET', dust: 5 });
+      const again = await app.inject({
+        method: 'POST',
+        url: '/api/workshop/master-facet',
+        headers,
+        payload: body,
+      });
+      expect(again.json()).toEqual(first.json());
+      expect(again.json().inventory.hub.player.facetDust).toBe(5);
       expect(await h.db.idempotencyRecord.count()).toBe(1);
     } finally {
       await app.close();

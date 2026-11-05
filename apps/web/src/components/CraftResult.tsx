@@ -1,9 +1,12 @@
 import { ArrowRight, Check, X } from 'lucide-react';
 import type { InventoryResult } from '@dicebound/shared-types';
 import { DieDetail } from './DieDetail';
-import { SPHERES } from '../lib/catalog';
+import { ACTIONS, SPHERES } from '../lib/catalog';
+const ACTION_NAMES = Object.fromEntries(
+  Object.entries(ACTIONS).map(([key, value]) => [key, value.name]),
+) as Record<string, string>;
 export function CraftResult({ result, onClose }: { result: InventoryResult; onClose: () => void }) {
-  if (result.type !== 'CRAFT')
+  if (result.type !== 'CRAFT' && result.type !== 'MASTER_FACET')
     return (
       <div className="inventory-success" role="status">
         <Check size={18} />
@@ -31,7 +34,7 @@ export function CraftResult({ result, onClose }: { result: InventoryResult; onCl
       <div className="craft-result-heading">
         <span>
           <Check size={17} />
-          Результат уже сохранён
+          {result.type === 'CRAFT' ? 'Результат уже сохранён' : 'Огранка сохранена'}
         </span>
         <button className="icon-button" aria-label="Скрыть результат" onClick={onClose}>
           <X size={16} />
@@ -59,8 +62,10 @@ export function CraftResult({ result, onClose }: { result: InventoryResult; onCl
         </span>
       </div>
       <p className="small-text muted">
-        Потрачена 1 {SPHERES[result.sphere].name.toLowerCase()}. Это снимок результата операции.
-        Новая конфигурация подтвердится победой в новом походе.
+        {result.type === 'CRAFT'
+          ? `Потрачена 1 ${SPHERES[result.sphere].name.toLowerCase()}.`
+          : `Мастер огранел грань ${result.face}: ${ACTION_NAMES[result.action]} за ${result.dust} пыли.`}{' '}
+        Это снимок результата операции. Новая конфигурация подтвердится победой в новом походе.
       </p>
       <div className="craft-comparison">
         <details>

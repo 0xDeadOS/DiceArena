@@ -13,7 +13,8 @@ export type InventoryPath =
   | '/api/inventory/equip'
   | '/api/inventory/lock'
   | '/api/inventory/dismantle'
-  | '/api/workshop/craft';
+  | '/api/workshop/craft'
+  | '/api/workshop/master-facet';
 export type ApiPath =
   | GamePath
   | InventoryPath

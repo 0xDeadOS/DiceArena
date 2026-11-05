@@ -5,6 +5,8 @@ import {
   dismantleDust,
   dismantlePermission,
   isDestructiveCraft,
+  masterFacetCost,
+  masterFacetRejection,
   POWER_SCORE_MODEL,
 } from '@dicebound/game-core';
 import { fixtureHub } from './fixtures.js';
@@ -34,6 +36,13 @@ export function fixtureInventory(
           destructive: isDestructiveCraft(die, sphere),
         };
       }),
+      masterFacet: (() => {
+        const cost = masterFacetCost(die.ilvl);
+        const reason =
+          masterFacetRejection(die, 1, 'STRIKE')?.message ??
+          (hub.player.facetDust < cost ? `Нужно ${cost} пыли граней.` : null);
+        return { allowed: !reason, reason, cost };
+      })(),
     })),
   };
 }

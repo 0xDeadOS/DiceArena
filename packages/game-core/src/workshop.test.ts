@@ -11,6 +11,9 @@ import {
   facetingRange,
   facePlay,
   isDestructiveCraft,
+  masterFacetCost,
+  masterFacetDie,
+  masterFacetRejection,
   parseCombatDie,
   rollAffixes,
   starterFaces,
@@ -209,5 +212,62 @@ describe('dismantling rules', () => {
       [1, 3, 6],
     );
     expect(dismantleDust('UNIQUE')).toBe(0);
+  });
+});
+
+describe('master faceting for dust', () => {
+  it('prices the cut by ilvl step and rejects out-of-range ilvl', () => {
+    expect(masterFacetCost(1)).toBe(5);
+    expect(masterFacetCost(5)).toBe(5);
+    expect(masterFacetCost(6)).toBe(8);
+    expect(masterFacetCost(50)).toBe(32);
+    for (const ilvl of [0, 51, 1.5, Number.NaN]) expect(() => masterFacetCost(ilvl)).toThrow();
+  });
+  it('validates the chosen face and action before any roll', () => {
+    expect(masterFacetRejection(die, 3, 'STRIKE')).toBeNull();
+    expect(masterFacetRejection(die, 0, 'STRIKE')?.code).toBe('INVALID_FACE');
+    expect(masterFacetRejection(die, 7, 'STRIKE')?.code).toBe('INVALID_FACE');
+    expect(masterFacetRejection(die, 2.5, 'STRIKE')?.code).toBe('INVALID_FACE');
+    expect(masterFacetRejection(die, 2, 'BLOCK' as never)?.code).toBe('INVALID_ACTION');
+    expect(masterFacetRejection({ ...die, isLocked: true }, 2, 'STRIKE')?.code).toBe('DIE_LOCKED');
+    expect(masterFacetRejection({ ...die, rarity: 'UNIQUE' }, 2, 'STRIKE')?.code).toBe(
+      'UNSUPPORTED_DIE',
+    );
+  });
+  it('rewrites only the chosen face, keeps the value inside the published range', () => {
+    const before = parseCombatDie(die);
+    for (let draw = 0; draw < 40; draw++) {
+      const result = masterFacetDie(before, 4, 'PIERCE', () => draw % 4);
+      const untouched = before.faces.filter((f) => f.face !== 4);
+      expect(result.faces.filter((f) => f.face !== 4)).toEqual(untouched);
+      const face = result.faces.find((f) => f.face === 4)!;
+      expect(face.action).toBe('PIERCE');
+      const [low, high] = facetingRange(result.ilvl, 'PIERCE');
+      expect(face.value).toBeGreaterThanOrEqual(low);
+      expect(face.value).toBeLessThanOrEqual(high);
+      expect(result.contentVersion).toBe((before.contentVersion ?? 0) + 1);
+      expect(result.powerScore).toBe(evaluateDiePowerScore(result));
+      expect(result.rarity).toBe(before.rarity);
+      expect(result.affixes).toEqual(before.affixes);
+      expect(result.quality).toBe(before.quality);
+    }
+    expect(before.faces.find((f) => f.face === 4)).toEqual(
+      parseCombatDie(die).faces.find((f) => f.face === 4),
+    );
+  });
+  it('refuses locked, unique and invalid cuts without touching the die', () => {
+    expect(() => masterFacetDie({ ...die, isLocked: true }, 1, 'STRIKE', noRandom)).toThrow();
+    expect(() => masterFacetDie({ ...die, rarity: 'UNIQUE' }, 1, 'STRIKE', noRandom)).toThrow();
+    expect(() => masterFacetDie(die, 9, 'STRIKE', noRandom)).toThrow();
+    expect(() => masterFacetDie(die, 1, 'BLOCK' as never, noRandom)).toThrow();
+  });
+  it('keeps affix-driven faces consistent for magic dice', () => {
+    const item = magic();
+    const result = masterFacetDie(item, 6, 'GUARD', () => 3);
+    expect(result.affixes).toEqual(item.affixes);
+    expect(result.faces.find((f) => f.face === 6)!.action).toBe('GUARD');
+    expect(facePlay(result, 6).value).toBeGreaterThanOrEqual(
+      result.faces.find((f) => f.face === 6)!.value,
+    );
   });
 });

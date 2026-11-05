@@ -1,6 +1,7 @@
 import { SPHERE_TYPES } from '@dicebound/shared-types';
 import type {
   CraftRequest,
+  MasterFacetRequest,
   TutorialRequest,
   ClaimDropRequest,
   DismantleRequest,
@@ -19,6 +20,9 @@ import {
   dismantleDust,
   dismantlePermission,
   isDestructiveCraft,
+  masterFacetCost,
+  masterFacetDie,
+  masterFacetRejection,
   parseCombatDie,
   POWER_SCORE_MODEL,
   requireRule,
@@ -35,7 +39,8 @@ export type InventoryCommand =
   | ({ type: 'EQUIP' } & EquipRequest)
   | ({ type: 'LOCK' } & LockRequest)
   | ({ type: 'DISMANTLE' } & DismantleRequest)
-  | ({ type: 'CRAFT' } & CraftRequest);
+  | ({ type: 'CRAFT' } & CraftRequest)
+  | ({ type: 'MASTER_FACET' } & MasterFacetRequest);
 export interface InventoryRepository {
   current(room: RoomContext, identity: TelegramIdentity, now: Date): Promise<InventoryDTO>;
   execute(
@@ -190,6 +195,55 @@ export class PrismaInventoryRepository implements InventoryRepository {
             };
             break;
           }
+          case 'MASTER_FACET': {
+            requireRule(
+              command.confirmed === true,
+              'CONFIRMATION_REQUIRED',
+              'Подтвердите огранку грани.',
+            );
+            const rejection = masterFacetRejection(before, command.face, command.action);
+            requireRule(
+              !rejection,
+              rejection?.code ?? 'MASTER_FACET_UNAVAILABLE',
+              rejection?.message ?? 'Огранка недоступна.',
+            );
+            const cost = masterFacetCost(item.ilvl);
+            requireRule(
+              member.facetDust >= cost,
+              'DUST_MISSING',
+              `Нужно ${cost} пыли граней, сейчас ${member.facetDust}.`,
+            );
+            let facetSeed: string | undefined;
+            let facetStep = 0;
+            const faceted = masterFacetDie(before, command.face, command.action, (max) =>
+              secretInt((facetSeed ??= newSecretSeed()), 'facet', facetStep++, max),
+            );
+            await tx.roomMember.update({
+              where: { id: member.id },
+              data: { facetDust: { decrement: cost } },
+            });
+            const after = await tx.die.update({
+              where: { id: item.id },
+              data: {
+                faces: json(faceted.faces),
+                powerScore: faceted.powerScore,
+                contentVersion: faceted.contentVersion,
+                masterCrafted: true,
+                lastVictoryAt: null,
+                lastVictoryPowerScore: null,
+              },
+            });
+            result = {
+              type: 'MASTER_FACET',
+              dieId: item.id,
+              face: command.face,
+              action: command.action,
+              dust: cost,
+              before,
+              after: toDieDTO(after, member.equippedDieId),
+            };
+            break;
+          }
         }
         const updated = await tx.roomMember.update({
           where: { id: member.id },
@@ -316,6 +370,15 @@ export class PrismaInventoryRepository implements InventoryRepository {
               : null,
         },
         dismantle: { ...dismantlePermission(die, activeRunDieId), dust: dismantleDust(die.rarity) },
+        masterFacet: (() => {
+          // Face 1 / STRIKE is always a legal choice, so only die-level blocks can surface here.
+          const rejection = masterFacetRejection(die, 1, 'STRIKE');
+          const cost = masterFacetCost(die.ilvl);
+          const reason =
+            rejection?.message ??
+            (hub.player.facetDust < cost ? `Нужно ${cost} пыли граней.` : null);
+          return { allowed: reason === null, reason, cost };
+        })(),
         craft: SPHERE_TYPES.map((sphere) => {
           const rejection = craftRejection(die, sphere);
           const hasSphere = (hub.inventory.spheres.find((s) => s.type === sphere)?.amount ?? 0) > 0;

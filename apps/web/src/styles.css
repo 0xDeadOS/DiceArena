@@ -4749,3 +4749,116 @@ button svg {
     flex-wrap: wrap;
   }
 }
+
+/* Stage 5: master faceting for dust. */
+.facet-panel {
+  margin-top: 22px;
+  padding: 21px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, rgba(255, 214, 143, 0.08), rgba(12, 10, 20, 0.4));
+}
+.facet-panel .section-heading {
+  margin-bottom: 14px;
+}
+.facet-panel .section-heading h2 {
+  margin-top: 8px;
+  font-size: 26px;
+}
+.facet-faces {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+.facet-face {
+  display: grid;
+  gap: 3px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 9px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.facet-face strong {
+  font-size: 15px;
+}
+.facet-face span {
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.4px;
+}
+.facet-face:hover:not(:disabled) {
+  border-color: rgba(255, 214, 143, 0.55);
+}
+.facet-face.active {
+  border-color: var(--gold);
+  background: rgba(255, 214, 143, 0.14);
+}
+.facet-face:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.facet-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.facet-action {
+  padding: 9px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.facet-action.strike.active {
+  border-color: #ff8f6b;
+  background: rgba(255, 143, 107, 0.16);
+}
+.facet-action.guard.active {
+  border-color: #7fc7ff;
+  background: rgba(127, 199, 255, 0.16);
+}
+.facet-action.pierce.active {
+  border-color: #c39bff;
+  background: rgba(195, 155, 255, 0.16);
+}
+.facet-action.heal.active {
+  border-color: #8ce0b0;
+  background: rgba(140, 224, 176, 0.16);
+}
+.facet-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.facet-blocked {
+  margin-top: 12px;
+  font-size: 10px;
+  color: #ffb4a2;
+}
+.facet-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 10px;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .facet-faces {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .facet-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

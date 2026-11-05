@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, onRequestHookHandler } from 'fastify';
 import type { InventoryCommand, InventoryRepository, ProfileRepository } from '@dicebound/db';
-import { SPHERE_TYPES } from '@dicebound/shared-types';
+import { FACE_ACTIONS, SPHERE_TYPES } from '@dicebound/shared-types';
 import type { InventoryDTO, InventoryResponse } from '@dicebound/shared-types';
 import type { MembershipChecker } from '../auth/membership.js';
 import { resolveRoom } from '../services/context.js';
@@ -70,6 +70,16 @@ export function inventoryRoutes(
       path: '/api/workshop/craft',
       type: 'CRAFT',
       properties: { ...item, sphere: { type: 'string', enum: [...SPHERE_TYPES] }, confirmed },
+    },
+    {
+      path: '/api/workshop/master-facet',
+      type: 'MASTER_FACET',
+      properties: {
+        ...item,
+        face: { type: 'integer', minimum: 1, maximum: 6 },
+        action: { type: 'string', enum: [...FACE_ACTIONS] },
+        confirmed,
+      },
     },
   ] as const;
   for (const { path, type, properties } of routes)
