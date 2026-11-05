@@ -252,7 +252,7 @@ export function App() {
             <BookOpen size={17} /> Полевой справочник <ArrowUpRight size={13} />
           </button>
           <div className="sidebar-footer">
-            <span className="online-dot" /> Этап 3 · Мастерская
+            <span className="online-dot" /> Этап 4 · Экспедиции
           </div>
         </div>
       </aside>
@@ -507,8 +507,9 @@ export function App() {
           ) : modal === 'roadmap' ? (
             <div className="prose">
               <p>
-                Готовы Обитель, тренировочный поход и крафт сферами. Остальные системы добавляются
-                поэтапно — без подмены игры случайными числами в браузере.
+                Готовы Обитель, тренировочный поход, крафт сферами, обучение и обычные экспедиции с
+                дропом. Остальные системы добавляются поэтапно — без подмены игры случайными числами
+                в браузере.
               </p>
               <div className="roadmap-list">
                 {[
@@ -521,11 +522,15 @@ export function App() {
                     'Серверный бой и бесплатный тренировочный маршрут из семи уровней.',
                   ],
                   ['Маленькая алхимия', 'Шесть сфер, экипировка, защита и распыление кубиков.'],
+                  [
+                    'Настоящая тьма',
+                    'Обучение, обычные экспедиции за бодрость и трофеи с серверным дропом.',
+                  ],
                   ['Общая легенда', 'Асинхронные рейды, зал славы и редкие анонсы в чат.'],
                 ].map(([title, text], index) => (
                   <div key={title}>
-                    <span className={`roadmap-step ${index <= 2 ? 'complete' : ''}`}>
-                      {index <= 2 ? <Check size={17} /> : `0${index + 1}`}
+                    <span className={`roadmap-step ${index <= 3 ? 'complete' : ''}`}>
+                      {index <= 3 ? <Check size={17} /> : `0${index + 1}`}
                     </span>
                     <div>
                       <h3>{title}</h3>
@@ -548,7 +553,11 @@ export function App() {
                 Тренировочные катакомбы не расходуют бодрость. Можно играть при любом её запасе;
                 награды — небольшое количество золота и пыли.
               </p>
-              <p>Обычные походы с усиленной добычей и выпадением снаряжения появятся позже.</p>
+              <p>
+                Обычная экспедиция стоит 1 бодрость и открывается после обучения. Сложность и
+                снаряжение фиксируются на старте, а найденные кубики ждут в трофеях: их нужно взять
+                в сумку или распылить.
+              </p>
               <button
                 className="button primary full"
                 onClick={() => {
@@ -556,12 +565,12 @@ export function App() {
                   navigate('expeditions');
                 }}
               >
-                К тренировкам <Map size={17} />
+                К походам <Map size={17} />
               </button>
             </div>
           ) : (
             <div className="prose">
-              <span className="stage-label">ЭТАП 4 · В РАЗРАБОТКЕ</span>
+              <span className="stage-label">СЛЕДУЮЩИЙ ЭТАП · В РАЗРАБОТКЕ</span>
               <div className="planned-emblem">{modal === 'raid' ? <Hexagon /> : <Crown />}</div>
               <p>
                 {modal === 'raid'
