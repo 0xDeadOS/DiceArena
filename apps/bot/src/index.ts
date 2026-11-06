@@ -15,6 +15,12 @@ async function main() {
         .url()
         .refine((value) => /^postgres(ql)?:\/\//.test(value)),
       APP_SHORT_NAME: z.string().regex(/^[A-Za-z0-9_]{3,64}$/),
+      BACKUP_CHAT_ID: z
+        .string()
+        .regex(/^-?\d+$/)
+        .transform((value) => BigInt(value))
+        .optional(),
+      BACKUP_INTERVAL_HOURS: z.coerce.number().min(1).max(168).default(6),
     })
     .safeParse(process.env);
   if (!parsed.success)
@@ -37,6 +43,12 @@ async function main() {
       appShortName: config.APP_SHORT_NAME,
       rooms: new PrismaRoomRepository(db),
       db,
+      backup: config.BACKUP_CHAT_ID
+        ? {
+            chatId: config.BACKUP_CHAT_ID,
+            intervalMs: config.BACKUP_INTERVAL_HOURS * 3_600_000,
+          }
+        : undefined,
     });
   } finally {
     await runtime?.stop();

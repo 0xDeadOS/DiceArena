@@ -46,6 +46,17 @@ const schema = z
       .enum(['true', 'false', '1', '0'])
       .default('false')
       .transform((value) => value === 'true' || value === '1'),
+    /**
+     * Личные сообщения админа, куда бот присылает резервную копию базы.
+     * Пусто — резервное копирование выключено.
+     */
+    BACKUP_CHAT_ID: z
+      .string()
+      .regex(/^-?\d+$/)
+      .transform((value) => BigInt(value))
+      .optional(),
+    /** Период резервного копирования в часах. */
+    BACKUP_INTERVAL_HOURS: z.coerce.number().min(1).max(168).default(6),
   })
   .superRefine((config, ctx) => {
     if (config.RUN_BOT && !config.APP_SHORT_NAME) {

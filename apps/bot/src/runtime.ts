@@ -5,10 +5,12 @@
  * background-воркера; `runtime.ts` собирает то же самое из общих деталей,
  * чтобы API мог поднять бота в своём процессе (см. apps/api/src/combined.ts).
  */
-import type { Bot } from 'grammy';
+import { InputFile, type Bot } from 'grammy';
 import type { PrismaClient, PrismaRoomRepository } from '@dicebound/db';
 import { buildBot } from './bot.js';
 import { startAnnouncementDispatcher } from './announce.js';
+import { runBackup, startBackupScheduler } from './backup.js';
+import type { BackupChannel } from './backup.js';
 
 export interface BotRuntime {
   bot: Bot;
@@ -29,6 +31,14 @@ export interface BotRuntimeOptions {
    * готовности, ни ошибки.
    */
   startupTimeoutMs?: number;
+  /**
+   * Личные сообщения админа для резервных копий базы.
+   * Не задано — копирование выключено.
+   */
+  backup?: {
+    chatId: bigint;
+    intervalMs?: number;
+  };
   log?: {
     info: (message: string) => void;
     warn: (message: string) => void;
@@ -46,6 +56,41 @@ export async function startBotRuntime(options: BotRuntimeOptions): Promise<BotRu
   const warn = options.log?.warn ?? ((message: string) => console.warn(message));
 
   const bot = buildBot(options.botToken, options.appShortName, options.rooms);
+
+  let stopBackup: (() => void) | undefined;
+  if (options.backup) {
+    const { chatId } = options.backup;
+    const channel: BackupChannel = {
+      sendDocument: (bytes, filename, caption) =>
+        bot.api.sendDocument(chatId.toString(), new InputFile(bytes, filename), { caption }),
+      sendText: (text) => bot.api.sendMessage(chatId.toString(), text),
+    };
+
+    // Полный снимок базы — это данные всех игроков, поэтому команда доступна
+    // только в личных сообщениях админа и больше нигде.
+    bot.command('backup', async (ctx) => {
+      if (ctx.chat.type !== 'private' || BigInt(ctx.chat.id) !== chatId) {
+        await ctx.reply('Эта команда доступна только владельцу бота в личных сообщениях.');
+        return;
+      }
+      try {
+        const result = await runBackup({ db: options.db, channel, log: warn });
+        await ctx.reply(`Готово: ${result.filename}, строк ${result.encoded.rowCount}.`);
+      } catch (error) {
+        await ctx.reply(
+          `Не удалось снять копию: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    });
+
+    stopBackup = startBackupScheduler({
+      db: options.db,
+      channel,
+      intervalMs: options.backup.intervalMs,
+      log: warn,
+    });
+  }
+
   const stopAnnouncements = startAnnouncementDispatcher({
     db: options.db,
     send: (chatId, text) => bot.api.sendMessage(chatId.toString(), text),
@@ -85,6 +130,7 @@ export async function startBotRuntime(options: BotRuntimeOptions): Promise<BotRu
       'getUpdates',
     );
   } catch (error) {
+    stopBackup?.();
     stopAnnouncements();
     if (bot.isRunning()) await bot.stop();
     throw error;
@@ -93,6 +139,7 @@ export async function startBotRuntime(options: BotRuntimeOptions): Promise<BotRu
   return {
     bot,
     async stop() {
+      stopBackup?.();
       stopAnnouncements();
       if (bot.isRunning()) await bot.stop();
     },

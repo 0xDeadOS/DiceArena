@@ -80,6 +80,12 @@ async function main() {
         appShortName,
         rooms: new PrismaRoomRepository(db),
         db,
+        backup: config.BACKUP_CHAT_ID
+          ? {
+              chatId: config.BACKUP_CHAT_ID,
+              intervalMs: config.BACKUP_INTERVAL_HOURS * 3_600_000,
+            }
+          : undefined,
         log: {
           info: (message) => app.log.info(message),
           warn: (message) => app.log.warn(message),

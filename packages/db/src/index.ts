@@ -19,3 +19,15 @@ export {
   markAnnouncement,
 } from './events.js';
 export type { AnnouncementPayload, PendingAnnouncement } from './events.js';
+export {
+  BACKUP_FORMAT_VERSION,
+  BACKUP_TABLES,
+  DEFERRED_COLUMNS,
+  MAX_RESTORABLE_BYTES,
+  assertRestorableSize,
+  createBackup,
+  decodeBackup,
+  encodeBackup,
+  restoreBackup,
+} from './backup.js';
+export type { BackupPayload, BackupRow, EncodedBackup } from './backup.js';
