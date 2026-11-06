@@ -1,0 +1,26 @@
+{
+  "name": "@dicebound/api",
+  "dependencies": {
+    "@dicebound/db": "*",
+    "@dicebound/game-core": "*",
+    "@dicebound/shared-types": "*",
+    "@fastify/cors": "^11.4.1",
+    "@fastify/rate-limit": "^10.3.0",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "grammy": "^1.38.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  }
+}
