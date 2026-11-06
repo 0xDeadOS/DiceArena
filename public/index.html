@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0b0705" />
+  <meta name="description" content="Path of Dice (Кубик Изгнанника) — кооперативно-соревновательный Telegram Mini App в сеттинге Path of Exile для компании из 6 изгнанников." />
+  <title>PATH OF DICE · Кубик Изгнанника</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E" />
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <!-- Фоновый слой: искры костра -->
+  <canvas id="embers" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="fog" aria-hidden="true"></div>
+
+  <div id="boot" class="boot">
+    <div class="boot-die">🎲</div>
+    <div class="boot-title">PATH OF DICE</div>
+    <div class="boot-sub">Кубик Изгнанника</div>
+    <div class="boot-bar"><span></span></div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <!-- ─────────────── ШАПКА ─────────────── -->
+    <header class="topbar" id="topbar">
+      <div class="topbar-left">
+        <button class="brand" data-go="hub" title="В Главный Хаб">
+          <span class="brand-die">🎲</span>
+          <span class="brand-text">
+            <strong>PATH OF DICE</strong>
+            <small>Кубик Изгнанника</small>
+          </span>
+        </button>
+        <div class="profile-switch" id="profileSwitch" title="Переключение профилей (локально)"></div>
+      </div>
+
+      <button class="active-player" id="activePlayer" data-go="hub" title="Ваш изгнанник">
+        <span class="active-player-avatar" id="activePlayerAvatar">🎲</span>
+        <span class="active-player-text">
+          <strong id="activePlayerName">—</strong>
+          <small id="activePlayerSub">изгнанник</small>
+        </span>
+      </button>
+
+      <div class="topbar-right">
+        <div class="mini-stats" id="miniStats"></div>
+        <button class="icon-btn" id="hubBtn" title="В Хаб" data-go="hub">🏠</button>
+        <button class="icon-btn" id="soundBtn" title="Звук">🔊</button>
+        <button class="icon-btn" id="codexBtn" title="Кодекс">📖</button>
+      </div>
+    </header>
+
+    <main id="screens" class="screens">
+
+      <!-- ═══════════════ 1. ХАБ ═══════════════ -->
+      <section class="screen" data-screen="hub">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">🏠 Sanctuary Hub</h1>
+            <p class="screen-sub">Убежище Изгнанников · <span id="hubChatName">часть друзей</span></p>
+          </div>
+          <div class="head-actions">
+            <span class="pill" id="hubPortalsPill">🌀 0 порталов</span>
+            <span class="pill" id="hubAtlasPill">🌳 0 очков</span>
+          </div>
+        </div>
+
+        <div class="hub-grid">
+          <!-- Кубик героя -->
+          <article class="die-hero card-glow" id="dieHero">
+            <div class="die-hero-glow" aria-hidden="true"></div>
+            <div class="die-face" id="hubDieFace">🎲</div>
+            <div class="die-hero-info">
+              <div class="die-hero-name" id="hubDieName">—</div>
+              <div class="die-hero-meta" id="hubDieMeta">—</div>
+              <div class="die-hero-mods" id="hubDieMods"></div>
+            </div>
+            <div class="die-hero-actions">
+              <button class="btn btn-primary btn-roll" id="rollBtn">
+                <span class="roll-icon">🎲</span>
+                <span class="roll-label">Ежедневный Бросок</span>
+                <span class="roll-sub" id="rollSub">1 доступен</span>
+              </button>
+              <div class="die-hero-row">
+                <button class="btn btn-ghost" data-go="forge">⚒️ В Кузню</button>
+                <button class="btn btn-ghost" data-go="maps">🗺️ В Атлас</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Босс чата -->
+          <article class="boss-card" id="bossCard">
+            <div class="boss-head">
+              <span class="boss-title">💀 Общий Босс чата</span>
+              <span class="pill pill-danger" id="bossDefeatedCount">0 добито</span>
+            </div>
+            <div class="boss-body">
+              <div class="boss-portrait" id="bossIcon">👹</div>
+              <div class="boss-info">
+                <div class="boss-name" id="bossName">—</div>
+                <div class="hpbar"><span id="bossBar"></span></div>
+                <div class="boss-hp" id="bossHp">0 / 0 HP</div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Навигационные карточки -->
+          <div class="nav-cards" id="navCards">
+            <button class="nav-card" data-go="forge" data-accent="amber">
+              <span class="nav-icon">⚒️</span>
+              <span class="nav-title">Кузня и Тайник Сфер</span>
+              <span class="nav-desc">Сферы, Мастерский верстак, базы и гэмбл у Гвеннен</span>
+              <span class="nav-badge" id="navForgeBadge">—</span>
+            </button>
+            <button class="nav-card" data-go="maps" data-accent="azure">
+              <span class="nav-icon">🗺️</span>
+              <span class="nav-title">Картографический Стол</span>
+              <span class="nav-desc">Карты T1–T16 и поход по развилкам</span>
+              <span class="nav-badge" id="navMapsBadge">—</span>
+            </button>
+            <button class="nav-card" data-go="atlas" data-accent="emerald">
+              <span class="nav-icon">🌳</span>
+              <span class="nav-title">Дерево Пассивок Атласа</span>
+              <span class="nav-desc">12 нод в трёх ветках: Ростовщик, Картограф, Воевода</span>
+              <span class="nav-badge" id="navAtlasBadge">—</span>
+            </button>
+            <button class="nav-card" data-go="raid" data-accent="crimson">
+              <span class="nav-icon">🚨</span>
+              <span class="nav-title">Алтарь Рейд-Босса</span>
+              <span class="nav-desc">Реликварий 4/4, призыв, Live Rally и банк лута</span>
+              <span class="nav-badge" id="navRaidBadge">—</span>
+            </button>
+            <button class="nav-card" data-go="camp" data-accent="violet">
+              <span class="nav-icon">🤝</span>
+              <span class="nav-title">Лагерь Пати</span>
+              <span class="nav-desc">Ладдер, обмен сферами, лента событий и Админка</span>
+              <span class="nav-badge" id="navCampBadge">—</span>
+            </button>
+          </div>
+
+          <!-- Лента + задания -->
+          <article class="panel feed-panel">
+            <div class="panel-head"><h2>📰 Лента событий</h2><span class="panel-hint">живая</span></div>
+            <div class="feed-list" id="hubFeed"></div>
+          </article>
+
+          <article class="panel quest-panel">
+            <div class="panel-head"><h2>📜 Задания дня</h2><span class="panel-hint" id="questDate">—</span></div>
+            <div class="quest-list" id="questList"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 2. КУЗНЯ ═══════════════ -->
+      <section class="screen" data-screen="forge">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">⚒️ Кузня и Тайник Сфер</h1>
+            <p class="screen-sub">Наковальня помнит каждый удар</p>
+          </div>
+          <div class="head-actions">
+            <span class="pill" id="forgeCurrencyPill">0 сфер</span>
+          </div>
+        </div>
+
+        <div class="forge-grid">
+          <article class="panel die-detail-panel">
+            <div class="panel-head"><h2>🎲 Избранный кубик</h2><span class="panel-hint" id="forgeDieHint">—</span></div>
+            <div class="die-detail" id="forgeDieDetail"></div>
+            <div class="forge-orbs" id="forgeOrbs"></div>
+            <div class="forge-message" id="forgeMessage"></div>
+          </article>
+
+          <article class="panel bench-panel">
+            <div class="panel-head"><h2>🔨 Мастерский верстак</h2><span class="panel-hint" id="benchDiscountHint">—</span></div>
+            <div class="bench-list" id="benchList"></div>
+          </article>
+
+          <article class="panel stash-panel">
+            <div class="panel-head"><h2>💰 Тайник Сфер</h2><span class="panel-hint">11 сфер PoE</span></div>
+            <div class="stash-grid" id="stashGrid"></div>
+          </article>
+
+          <article class="panel collection-panel">
+            <div class="panel-head"><h2>🎒 Коллекция кубиков</h2><span class="panel-hint" id="collectionCount">0</span></div>
+            <div class="collection" id="collection"></div>
+          </article>
+
+          <article class="panel shop-panel">
+            <div class="panel-head"><h2>🛒 Лавка Гвеннен</h2><span class="panel-hint">базы и гэмбл</span></div>
+            <div class="shop-list" id="shopList"></div>
+            <button class="btn btn-mythic btn-block" id="gambleBtn">🎰 Гэмбл уникального кубика · 20 Хаоса</button>
+          </article>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 3. КАРТЫ ═══════════════ -->
+      <section class="screen" data-screen="maps">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">🗺️ Картографический Стол</h1>
+            <p class="screen-sub">Атлас Миров 2.0 · T1–T16 · карта с развилками</p>
+          </div>
+          <div class="head-actions">
+            <span class="pill" id="mapsPortalsPill">🌀 0</span>
+            <span class="pill" id="mapsCountPill">🃏 0 карт</span>
+          </div>
+        </div>
+
+        <div class="maps-layout">
+          <article class="panel device-panel" id="devicePanel">
+            <div class="panel-head"><h2>🔮 Мап-девайс</h2><span class="panel-hint" id="deviceHint">выберите карту</span></div>
+            <div class="device-slot" id="deviceSlot">
+              <div class="device-empty">Вставьте карту из тайника ниже</div>
+            </div>
+            <div class="device-actions" id="deviceActions"></div>
+            <div class="duo-picker" id="duoPicker"></div>
+            <div class="device-run-actions">
+              <button class="btn btn-primary btn-block" id="startRunBtn" disabled>🚪 Войти в карту</button>
+              <button class="btn btn-ghost btn-block" id="autoRunBtn" disabled>⚡ Быстрый авто-забег</button>
+            </div>
+          </article>
+
+          <!-- ИНТЕРАКТИВНАЯ КАРТА -->
+          <article class="panel run-panel hidden" id="runPanel">
+            <div class="panel-head">
+              <h2 id="runTitle">🗺️ Поход</h2>
+              <span class="panel-hint" id="runPhaseHint">—</span>
+            </div>
+            <div class="run-hud">
+              <div class="run-hp">
+                <span class="run-hp-icon">❤️</span>
+                <div class="hpbar"><span id="runHpBar"></span></div>
+                <span class="run-hp-text" id="runHpText">0/0</span>
+              </div>
+              <div class="run-hud-stats">
+                <span class="chip" id="runTierChip">T1</span>
+                <span class="chip" id="runComboChip">🔥 0</span>
+                <span class="chip" id="runBuffChip">＋0</span>
+              </div>
+            </div>
+            <div class="map-graph-wrap">
+              <svg id="mapGraph" class="map-graph" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+            <div class="run-hint" id="runHint">Выберите узел на развилке</div>
+            <div class="combat-panel hidden" id="combatPanel"></div>
+            <div class="run-log" id="runLog"></div>
+            <div class="run-actions" id="runActions"></div>
+          </article>
+
+          <article class="panel maps-list-panel">
+            <div class="panel-head"><h2>🃏 Тайник карт</h2><button class="btn btn-tiny btn-ghost" id="buyMapBtn">Купить у Кирака</button></div>
+            <div class="maps-list" id="mapsList"></div>
+            <div class="kirac-hint" id="kiracHint">Кирак просит 🪨3 + 🔵3</div>
+          </article>
+
+          <article class="panel map-mods-panel">
+            <div class="panel-head"><h2>⚖️ Моды карт: Risk vs Reward</h2><span class="panel-hint">10 модификаторов</span></div>
+            <div class="mod-chips" id="mapModsChips"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 4. АТЛАС ═══════════════ -->
+      <section class="screen" data-screen="atlas">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">🌳 Дерево Пассивок Атласа</h1>
+            <p class="screen-sub">12 нод · 3 ветки · вечная жадность изгнанника</p>
+          </div>
+          <div class="head-actions">
+            <span class="pill pill-gold" id="atlasPointsPill">🌳 0 очков</span>
+            <span class="pill" id="atlasBonusPill">🎯 0/16</span>
+          </div>
+        </div>
+
+        <div class="atlas-branches" id="atlasBranches"></div>
+
+        <article class="panel atlas-bonus-panel">
+          <div class="panel-head"><h2>🎯 Bonus Objectives</h2><span class="panel-hint">первое прохождение тира</span></div>
+          <div class="bonus-grid" id="bonusObjectives"></div>
+        </article>
+      </section>
+
+      <!-- ═══════════════ 5. РЕЙД ═══════════════ -->
+      <section class="screen" data-screen="raid">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">🚨 Алтарь Рейд-Босса</h1>
+            <p class="screen-sub">Создатель · Древний · Мейвен</p>
+          </div>
+          <div class="head-actions">
+            <span class="pill pill-danger" id="raidTotalPill">💠 0/4</span>
+          </div>
+        </div>
+
+        <div class="raid-grid">
+          <article class="panel reliquary-panel">
+            <div class="panel-head"><h2>💠 Реликварий чата</h2><span class="panel-hint">сдай 4 разных фрагмента</span></div>
+            <div class="reliquary" id="reliquary"></div>
+            <button class="btn btn-danger btn-block" id="summonRaidBtn" disabled>🚨 Призвать Рейд-Босса</button>
+          </article>
+
+          <article class="panel raid-boss-panel" id="raidBossPanel">
+            <div class="panel-head"><h2 id="raidBossTitle">Рейд не активен</h2><span class="panel-hint" id="raidTimer">—</span></div>
+            <div class="raid-boss-body">
+              <div class="raid-boss-icon" id="raidBossIcon">👁️</div>
+              <div class="raid-boss-info">
+                <div class="hpbar hpbar-big"><span id="raidBossBar"></span></div>
+                <div class="raid-boss-hp" id="raidBossHp">—</div>
+                <div class="raid-shield" id="raidShield"></div>
+              </div>
+            </div>
+            <div class="rally-box" id="rallyBox">
+              <div class="rally-title">⚡ Live Rally Combo</div>
+              <div class="rally-bar"><span id="rallyBar"></span></div>
+              <div class="rally-text" id="rallyText">3+ игрока за 10 минут → x1.5 · 5+ → x2.0 и игнор щитов</div>
+            </div>
+            <button class="btn btn-primary btn-block" id="raidAttackBtn">⚔️ Атаковать рейд-босса</button>
+            <div class="raid-contrib" id="raidContrib"></div>
+          </article>
+
+          <article class="panel loot-panel">
+            <div class="panel-head"><h2>🎁 Банк лута</h2><span class="panel-hint" id="lootHint">—</span></div>
+            <div class="loot-bank" id="lootBank"></div>
+            <button class="btn btn-ghost btn-block" id="raidClaimBtn" disabled>🎁 Забрать награду</button>
+            <button class="btn btn-mythic btn-block" id="raidRollBtn" disabled>🎲 /roll-loot · уникальный кубик</button>
+          </article>
+
+          <article class="panel raid-history-panel">
+            <div class="panel-head"><h2>📜 История рейдов</h2><span class="panel-hint">последние 5</span></div>
+            <div class="raid-history" id="raidHistory"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 6. ЛАГЕРЬ ═══════════════ -->
+      <section class="screen" data-screen="camp">
+        <div class="screen-head">
+          <div>
+            <h1 class="screen-title">🤝 Лагерь Пати</h1>
+            <p class="screen-sub">Ладдер · обмен · лента · админка</p>
+          </div>
+          <div class="head-actions" id="adminPillWrap"></div>
+        </div>
+
+        <div class="camp-grid">
+          <article class="panel ladder-panel">
+            <div class="panel-head"><h2>🏆 Ладдер</h2><span class="panel-hint">мощь · уровень · боссы</span></div>
+            <div class="ladder" id="ladder"></div>
+            <button class="btn btn-ghost btn-block" id="duelBtn">🤺 Дуэль с другом</button>
+          </article>
+
+          <article class="panel trade-panel">
+            <div class="panel-head"><h2>🔄 Обмен сферами</h2><span class="panel-hint">помоги другу</span></div>
+            <div class="trade-form">
+              <label class="field"><span>Кому</span><select id="tradeTarget"></select></label>
+              <label class="field"><span>Сфера</span><select id="tradeOrb"></select></label>
+              <label class="field"><span>Сколько</span><input id="tradeAmount" type="number" min="1" value="1" /></label>
+              <button class="btn btn-primary" id="tradeBtn">Передать</button>
+            </div>
+            <div class="trade-message" id="tradeMessage"></div>
+          </article>
+
+          <article class="panel feed-panel camp-feed">
+            <div class="panel-head"><h2>📰 Лента чата</h2><span class="panel-hint">все события</span></div>
+            <div class="feed-list feed-tall" id="campFeed"></div>
+          </article>
+
+          <article class="panel admin-panel" id="adminPanel">
+            <div class="panel-head"><h2>🛠️ Админка</h2><span class="panel-hint" id="adminHint">только для администратора</span></div>
+            <div class="admin-grid" id="adminGrid"></div>
+            <div class="admin-message" id="adminMessage"></div>
+          </article>
+
+          <article class="panel duels-panel">
+            <div class="panel-head"><h2>🤺 Дуэли</h2><span class="panel-hint">3 в день</span></div>
+            <div class="duel-list" id="duelList"></div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span>PATH OF DICE · Кубик Изгнанника</span>
+      <span class="footer-dot">•</span>
+      <span id="footerVersion">v1.0</span>
+      <span class="footer-dot">•</span>
+      <span>fan project, not affiliated with GGG</span>
+    </footer>
+  </div>
+
+  <!-- ═══════════ ЛУТ-ФИЛЬТР NEVER SINK ═══════════ -->
+  <div class="loot-banner" id="lootBanner" aria-live="polite">
+    <div class="loot-beam"></div>
+    <div class="loot-inner">
+      <div class="loot-icon" id="lootIcon">🌟</div>
+      <div class="loot-text">
+        <div class="loot-title" id="lootTitle">Exalted Orb</div>
+        <div class="loot-sub" id="lootSub">Экзальт</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ МОДАЛКА РЕЗУЛЬТАТА БРОСКА ═══════════ -->
+  <div class="modal" id="rollModal">
+    <div class="modal-card roll-card">
+      <button class="modal-close" data-close="#rollModal">✕</button>
+      <div class="roll-die-anim" id="rollDieAnim">🎲</div>
+      <h3 class="roll-title" id="rollModalTitle">Бросок</h3>
+      <div class="roll-breakdown" id="rollBreakdown"></div>
+      <div class="roll-orbs" id="rollOrbs"></div>
+      <div class="roll-damage" id="rollDamage"></div>
+      <div class="roll-events" id="rollEvents"></div>
+      <button class="btn btn-primary btn-block" data-close="#rollModal">Продолжить</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ МОДАЛКА ОТЧЁТА ПОХОДА ═══════════ -->
+  <div class="modal" id="reportModal">
+    <div class="modal-card report-card">
+      <button class="modal-close" data-close="#reportModal">✕</button>
+      <h3 id="reportTitle">Отчёт похода</h3>
+      <div class="report-body" id="reportBody"></div>
+      <div class="report-actions">
+        <button class="btn btn-primary" data-close="#reportModal">Закрыть</button>
+        <button class="btn btn-ghost" id="reportDismissBtn">Убрать из активных</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ КОДЕКС ═══════════ -->
+  <div class="modal" id="codexModal">
+    <div class="modal-card codex-card">
+      <button class="modal-close" data-close="#codexModal">✕</button>
+      <h3>📖 База Модов (Codex)</h3>
+      <div class="codex-tabs" id="codexTabs">
+        <button class="codex-tab active" data-tab="prefixes">Префиксы (16)</button>
+        <button class="codex-tab" data-tab="suffixes">Суффиксы (16)</button>
+        <button class="codex-tab" data-tab="bases">Базы и имплиситы</button>
+        <button class="codex-tab" data-tab="currencies">Сферы (11)</button>
+        <button class="codex-tab" data-tab="mapmods">Моды карт (10)</button>
+        <button class="codex-tab" data-tab="uniques">Уникальные</button>
+      </div>
+      <div class="codex-body" id="codexBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Тосты ═══════════ -->
+  <div class="toasts" id="toasts"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
