@@ -18,5 +18,16 @@
     "typecheck": "tsc -b",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    }
   }
 }

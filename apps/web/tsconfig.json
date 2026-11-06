@@ -8,7 +8,9 @@
     "noEmit": true,
     "composite": false,
     "declaration": false,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "customConditions": ["development"]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

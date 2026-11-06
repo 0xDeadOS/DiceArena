@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { GameRuleError } from '@dicebound/game-core';
 import { gameRoutes } from './routes/game.js';
@@ -34,6 +35,22 @@ export interface AppDependencies {
   maxInitDataAgeSeconds?: number;
   clock?: () => Date;
   logLevel?: string | false;
+  /**
+   * Происхождения, которым разрешено вызывать API из браузера.
+   *
+   * Нужно, когда фронтенд отдан отдельным статическим сайтом (например Static
+   * Site на Render) и браузер обращается к API на другом домене. Пусто или
+   * отсутствует — CORS не включается, API доступен только с того же
+   * происхождения.
+   */
+  corsOrigins?: string[];
+  /**
+   * Доверять заголовкам `X-Forwarded-*` от обратного прокси.
+   *
+   * За прокси платформы (Render и подобные) без этого rate-limit по IP видит
+   * адрес прокси и считает квоту общей для всех клиентов.
+   */
+  trustProxy?: boolean;
 }
 
 export async function buildApp(deps: AppDependencies) {
@@ -58,7 +75,7 @@ export async function buildApp(deps: AppDependencies) {
     bodyLimit: 4_096,
     requestTimeout: 10_000,
     connectionTimeout: 10_000,
-    trustProxy: false,
+    trustProxy: deps.trustProxy ?? false,
     ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } },
   });
   app.decorateRequest('launch', null);
@@ -101,6 +118,18 @@ export async function buildApp(deps: AppDependencies) {
       .code(404)
       .send({ error: { code: 'NOT_FOUND', message: 'Маршрут не найден.', requestId: request.id } });
   });
+
+  if (deps.corsOrigins && deps.corsOrigins.length > 0) {
+    // Явный белый список: `credentials` не используется, авторизация идёт в
+    // заголовке `Authorization: tma <initData>`, поэтому достаточно origin+headers.
+    await app.register(cors, {
+      origin: deps.corsOrigins,
+      methods: ['GET', 'POST'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'],
+      credentials: false,
+      maxAge: 600,
+    });
+  }
 
   // Coarse IP protection before HMAC; user quota uses the signed identity, not a header/user_id.
   await app.register(rateLimit, { global: true, max: 30, timeWindow: 1_000, skipOnError: false });

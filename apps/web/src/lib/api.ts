@@ -46,13 +46,28 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
+/**
+ * Префикс происхождения API.
+ *
+ * Локально и при раздаче статики тем же сервисом браузер ходит по относительным
+ * `/api/...`. Когда фронтенд отдан отдельным статическим сайтом (например
+ * Static Site на Render), API живёт на другом происхождении: задайте
+ * `VITE_API_ORIGIN` на этапе сборки. Значение встраивается в бандл, поэтому
+ * секретом оно не является.
+ */
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/+$/, '');
+
+export function apiUrl(path: ApiPath): string {
+  return `${API_ORIGIN}${path}`;
+}
+
 export async function apiRequest<T>(
   path: ApiPath,
   initData: string,
   mutation?: Mutation,
 ): Promise<T> {
   const post = path === '/api/auth/session' || !!mutation;
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     method: post ? 'POST' : 'GET',
     headers: {
       Authorization: `tma ${initData}`,

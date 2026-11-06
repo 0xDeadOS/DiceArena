@@ -192,6 +192,7 @@ apps/
   api/                 Fastify, Telegram HMAC, membership cache, безопасные DTO
   bot/                 grammY, /game /start /help, миграция чата, права бота
   web/                 React Mini App и отдельный UI-only обзор
+render.yaml            Blueprint Render: API+бот, статика, PostgreSQL (free)
 packages/
   shared-types/        Публичные контракты без серверных секретов
   game-core/           Чистый FSM боя, шесть сфер, аффиксы, враги, DAG, награды, ETV/PS
@@ -202,6 +203,7 @@ tests/                 Fixtures и Playwright
 - [Архитектурные решения и границы безопасности](docs/architecture.md)
 - [Боевой контракт и параметры тренировки](docs/combat.md)
 - [Мастерская, шесть сфер и временная модель PS](docs/workshop.md)
+- [Деплой на бесплатный тариф Render](docs/deployment.md)
 - [Ручная приёмка и следующие этапы](docs/acceptance.md)
 
 > `prisma migrate` требует нативный schema-engine. При первой установке Prisma загружает его с `binaries.prisma.sh`; в среде с ограниченным egress этот домен может быть недоступен. Это не причина заменять PostgreSQL mock-данными или пропускать миграции в production. Локальные интеграционные тесты исполняют SQL непосредственно на PostgreSQL 16; CI дополнительно запускает нативный `migrate deploy` и полный `npm run build`. Ручной Telegram smoke-test требует окружения с доступом к Bot API и официальному SDK и пока не выполнен.

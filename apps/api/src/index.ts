@@ -30,6 +30,11 @@ async function main() {
     membership,
     maxInitDataAgeSeconds: config.INIT_DATA_MAX_AGE_SECONDS,
     logLevel: config.LOG_LEVEL,
+    corsOrigins: (config.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0),
+    trustProxy: config.TRUST_PROXY,
   });
   app.addHook('onClose', async () => {
     await db.$disconnect();

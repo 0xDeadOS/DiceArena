@@ -2,8 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 import { createDatabase, PrismaRoomRepository } from '@dicebound/db';
-import { buildBot } from './bot.js';
-import { startAnnouncementDispatcher } from './announce.js';
+import { startBotRuntime } from './runtime.js';
 
 loadEnv({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
 
@@ -24,35 +23,23 @@ async function main() {
     );
   const config = parsed.data;
   const db = createDatabase(config.DATABASE_URL);
-  const bot = buildBot(config.BOT_TOKEN, config.APP_SHORT_NAME, new PrismaRoomRepository(db));
-  const stopAnnouncements = startAnnouncementDispatcher({
-    db,
-    send: (chatId, text) => bot.api.sendMessage(chatId.toString(), text),
-    log: (message) => console.warn(message),
-  });
+  let runtime: Awaited<ReturnType<typeof startBotRuntime>> | undefined;
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
-      stopAnnouncements();
-      if (bot.isRunning()) void bot.stop();
+      void runtime?.stop();
     });
   }
   try {
     await db.$connect();
-    await bot.init();
-    // grammY start() deletes webhooks; refuse to take over a configured webhook bot.
-    const webhook = await bot.api.getWebhookInfo();
-    if (webhook.url) throw new Error('Configured webhook: long polling startup refused');
-    await bot.api.setMyCommands([
-      { command: 'game', description: 'Войти в Обитель чата' },
-      { command: 'start', description: 'Как начать играть' },
-      { command: 'help', description: 'Правила и помощь' },
-    ]);
-    await bot.start({
-      allowed_updates: ['message', 'my_chat_member'],
-      onStart: () => console.info('Dicebound bot is running.'),
+    // Тот же runtime, что встраивается в процесс API (apps/api/src/combined.ts).
+    runtime = await startBotRuntime({
+      botToken: config.BOT_TOKEN,
+      appShortName: config.APP_SHORT_NAME,
+      rooms: new PrismaRoomRepository(db),
+      db,
     });
   } finally {
-    stopAnnouncements();
+    await runtime?.stop();
     await db.$disconnect();
   }
 }

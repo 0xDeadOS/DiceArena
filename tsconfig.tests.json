@@ -6,7 +6,8 @@
     "lib": ["ES2022", "DOM"],
     "composite": false,
     "declaration": false,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client"]
   },
   "include": [
     "tests/**/*.ts",
