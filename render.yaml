@@ -1,0 +1,93 @@
+# Dicebound: Chat Raiders — инфраструктура для бесплатного тарифа Render.
+#
+# Три сервиса и ни одного платного:
+#   1. dicebound-api   — web-сервис: HTTP API + Telegram-бот в одном процессе.
+#   2. dicebound-web   — статический сайт с интерфейсом Mini App.
+#   3. dicebound-db    — PostgreSQL.
+#
+# Почему API и бот живут в одном web-сервисе: Render не даёт бесплатных
+# background-воркеров, а бот на long polling не порождает входящих запросов —
+# отдельный сервис без HTTP-трафика простаивает и засыпает. Внутри web-сервиса
+# бот работает рядом с HTTP и не даёт инстансу уснуть (RUN_BOT=true).
+#
+# Секреты здесь не хранятся: BOT_TOKEN и DATABASE_URL задаются в панели Render
+# или подтягиваются из базы через fromDatabase.
+
+services:
+  # --- HTTP API + Telegram-бот -------------------------------------------
+  - type: web
+    name: dicebound-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    # Node берётся из engines корня; фиксируем явно, чтобы сборка не зависела
+    # от версии по умолчанию на образе Render.
+    buildCommand: npm ci && npm run db:generate && npm run build:server
+    startCommand: node apps/api/dist/combined.js
+    healthCheckPath: /health/live
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: '22.12.0'
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      # Render сам подставляет PORT своего прокси; не переопределяем.
+      - key: LOG_LEVEL
+        value: info
+      - key: RUN_BOT
+        value: 'true'
+      # За обратным прокси Render: без этого rate-limit по IP видит адрес прокси
+      # и считает квоту общей для всех клиентов.
+      - key: TRUST_PROXY
+        value: 'true'
+      # Секрет из BotFather. Задаётся в панели Render, в Git не хранится.
+      - key: BOT_TOKEN
+        sync: false
+      # Короткое имя Mini App из BotFather (/newapp), не имя бота.
+      - key: APP_SHORT_NAME
+        sync: false
+      # Происхождение статического сайта ниже. Замените на реальный адрес,
+      # который выдаст Render (например https://dicebound-web.onrender.com).
+      - key: CORS_ORIGINS
+        sync: false
+      # Личные сообщения админа, куда бот присылает резервную копию базы.
+      # Бесплатная база Render удаляется через 30 дней, поэтому копия — не
+      # формальность: это единственный способ вернуть прогресс игроков.
+      - key: BACKUP_CHAT_ID
+        sync: false
+      - key: BACKUP_INTERVAL_HOURS
+        value: '6'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dicebound-db
+          property: connectionString
+
+  # --- Интерфейс Mini App -------------------------------------------------
+  - type: web
+    name: dicebound-web
+    runtime: static
+    buildCommand: npm ci && npm run build -w @dicebound/web
+    staticPublishPath: ./apps/web/dist
+    autoDeploy: true
+    envVars:
+      # Встраивается в бандл на этапе сборки, поэтому это не секрет.
+      # Замените на реальный адрес API, который выдаст Render
+      # (например https://dicebound-api.onrender.com).
+      - key: VITE_API_ORIGIN
+        sync: false
+    routes:
+      # Клиентское приложение: любой неизвестный путь отдаёт index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# --- PostgreSQL -----------------------------------------------------------
+# Бесплатная база Render живёт 30 дней и затем удаляется вместе с данными.
+# Для долгоживущего прогресса игроков укажите внешний DATABASE_URL
+# (Neon, Supabase, свой сервер) и удалите этот блок.
+databases:
+  - name: dicebound-db
+    plan: free
+    databaseName: dicebound

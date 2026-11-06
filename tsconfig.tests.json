@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "composite": false,
+    "declaration": false,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "apps/*/src/**/*.test.ts",
+    "packages/*/src/**/*.test.ts",
+    "packages/db/tests/**/*.ts",
+    "vitest*.ts",
+    "playwright.config.ts",
+    "scripts/**/*.ts"
+  ]
+}

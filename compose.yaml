@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dicebound
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dicebound}
+      POSTGRES_DB: dicebound
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dicebound -d dicebound']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  postgres_data:

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vscode/
+.playwright/
+test-results/
+.tmp/
+packages/db/src/generated/
+playwright-report/

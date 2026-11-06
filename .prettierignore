@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+package-lock.json
+*.tsbuildinfo
+packages/db/prisma/migrations
+.tmp
+packages/db/src/generated
+
+playwright-report
+test-results

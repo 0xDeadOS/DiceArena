@@ -1,0 +1,90 @@
+import type { ApiErrorDTO } from '@dicebound/shared-types';
+export type GamePath =
+  | '/api/map/start'
+  | '/api/expedition/start'
+  | '/api/map/step'
+  | '/api/map/retreat'
+  | '/api/battle/roll'
+  | '/api/battle/decision';
+export type InventoryPath =
+  | '/api/tutorial/reward'
+  | '/api/tutorial/complete'
+  | '/api/inventory/claim'
+  | '/api/inventory/equip'
+  | '/api/inventory/lock'
+  | '/api/inventory/dismantle'
+  | '/api/workshop/craft'
+  | '/api/workshop/master-facet';
+export type RaidPath =
+  | '/api/raid'
+  | '/api/leaderboard'
+  | '/api/raid/contribute'
+  | '/api/raid/summon'
+  | '/api/raid/attack'
+  | '/api/raid/decide'
+  | '/api/raid/claim-trophy';
+
+export type ApiPath =
+  | GamePath
+  | InventoryPath
+  | RaidPath
+  | '/api/inventory'
+  | '/api/map/current'
+  | '/api/auth/session'
+  | '/api/hub';
+export interface Mutation {
+  key: string;
+  body: Record<string, unknown>;
+}
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+/**
+ * Префикс происхождения API.
+ *
+ * Локально и при раздаче статики тем же сервисом браузер ходит по относительным
+ * `/api/...`. Когда фронтенд отдан отдельным статическим сайтом (например
+ * Static Site на Render), API живёт на другом происхождении: задайте
+ * `VITE_API_ORIGIN` на этапе сборки. Значение встраивается в бандл, поэтому
+ * секретом оно не является.
+ */
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN ?? '').replace(/\/+$/, '');
+
+export function apiUrl(path: ApiPath): string {
+  return `${API_ORIGIN}${path}`;
+}
+
+export async function apiRequest<T>(
+  path: ApiPath,
+  initData: string,
+  mutation?: Mutation,
+): Promise<T> {
+  const post = path === '/api/auth/session' || !!mutation;
+  const response = await fetch(apiUrl(path), {
+    method: post ? 'POST' : 'GET',
+    headers: {
+      Authorization: `tma ${initData}`,
+      ...(post ? { 'Content-Type': 'application/json' } : {}),
+      ...(mutation ? { 'Idempotency-Key': mutation.key } : {}),
+    },
+    ...(post ? { body: JSON.stringify(mutation?.body ?? {}) } : {}),
+    signal: AbortSignal.timeout(12_000),
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as ApiErrorDTO | null;
+    throw new ApiError(
+      response.status,
+      payload?.error?.code ?? 'REQUEST_FAILED',
+      payload?.error?.message ?? 'Не удалось связаться с Обителью. Попробуйте ещё раз.',
+    );
+  }
+  return response.json() as Promise<T>;
+}
